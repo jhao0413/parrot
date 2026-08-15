@@ -14,12 +14,12 @@ const STYLE_CSS = `
   margin: 0.25em 0;
   color: inherit;
   font-family: inherit;
-  font-size: 0.95em;
+  font-size: 0.88em;
   line-height: 1.6;
 }
 [data-mt-trans]:not(.parrot-loading) {
-  text-decoration: underline dotted rgba(128, 128, 128, 0.45);
-  text-decoration-thickness: 1px;
+  text-decoration: underline dotted #3b82f6;
+  text-decoration-thickness: 1.5px;
   text-underline-offset: 0.25em;
 }
 [data-mt-trans].parrot-loading {
