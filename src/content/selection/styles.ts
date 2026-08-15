@@ -46,6 +46,33 @@ export const popupStyles = `
   line-height: 1.6;
   color: #1f2937;
   white-space: pre-wrap;
+  flex: 1;
+}
+.pr-result-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+.pr-result-row .pr-icon {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+}
+.pr-result-row .pr-icon svg {
+  width: 15px;
+  height: 15px;
+}
+.pr-icon svg {
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+}
+.pr-icon .pr-busy {
+  animation: pr-pulse 1s ease-in-out infinite;
+  color: #3b82f6;
+}
+@keyframes pr-pulse {
+  50% { opacity: 0.4; }
 }
 .pr-dict {
   border-radius: 8px;

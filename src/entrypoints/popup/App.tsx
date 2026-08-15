@@ -2,15 +2,7 @@ import { useEffect, useState } from 'react';
 import { sendBg, sendTab } from '@/messaging/protocol';
 import { getSettings, updateSettings } from '@/storage/settings';
 import { LangSelect } from '@/ui/LangSelect';
-
-const PROVIDERS = [
-  { id: 'google', name: 'Google（免费）' },
-  { id: 'microsoft', name: '微软（免费）' },
-  { id: 'openai', name: 'OpenAI 兼容' },
-  { id: 'gemini', name: 'Gemini' },
-  { id: 'youdao', name: '有道' },
-  { id: 'baidu', name: '百度' },
-] as const;
+import { PROVIDER_LIST, type ProviderId } from '@/ui/providerList';
 
 function App() {
   const [pageOn, setPageOn] = useState<boolean | null>(null); // null = 当前页不可注入
@@ -47,7 +39,7 @@ function App() {
 
   const changeProvider = async (id: string) => {
     setActiveProvider(id);
-    await updateSettings({ provider: { active: id as 'google' } });
+    await updateSettings({ provider: { active: id as ProviderId } });
   };
 
   const changeMode = async (m: 'bilingual' | 'translationOnly') => {
@@ -113,7 +105,7 @@ function App() {
           onChange={(e) => void changeProvider(e.target.value)}
           className="rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm focus:border-blue-400 focus:outline-none"
         >
-          {PROVIDERS.map((p) => (
+          {PROVIDER_LIST.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
             </option>

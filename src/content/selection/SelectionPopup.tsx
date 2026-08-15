@@ -2,7 +2,30 @@ import { useEffect, useState } from 'react';
 import { sendBg, type Response, type SingleTranslateResult } from '@/messaging/protocol';
 import { getSettings } from '@/storage/settings';
 import { speak } from '@/tts/player';
+import { VolumeIcon } from '@/ui/SpeakerButton';
 import { popupStyles } from './styles';
+
+/** shadow root 内的发音按钮（Tailwind 进不来 shadow，用 pr- 前缀自带样式） */
+function ShadowSpeaker({ text, title }: { text: string; title: string }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <button
+      type="button"
+      className="pr-icon"
+      title={title}
+      disabled={busy || !text.trim()}
+      onClick={(e) => {
+        e.stopPropagation();
+        setBusy(true);
+        void speak(text)
+          .catch((err) => console.warn('TTS failed', err))
+          .finally(() => setBusy(false));
+      }}
+    >
+      <VolumeIcon className={busy ? 'pr-busy' : undefined} />
+    </button>
+  );
+}
 
 /** 划词弹窗内容（挂在 shadow root 内，样式走 popupStyles 注入） */
 export function SelectionPopup({
@@ -54,9 +77,7 @@ export function SelectionPopup({
               <div className="pr-dict-head">
                 {result.dict.word}
                 {result.dict.phonetic && <span className="pr-phonetic">{result.dict.phonetic}</span>}
-                <button type="button" className="pr-icon" onClick={() => void speak(result.dict!.word, 'en')}>
-                  🔊
-                </button>
+                <ShadowSpeaker text={result.dict.word} title="朗读单词" />
               </div>
               {result.dict.explanations.length > 0 && (
                 <ul className="pr-dict-list">
@@ -67,15 +88,23 @@ export function SelectionPopup({
               )}
             </div>
           )}
-          <p className="pr-result">
-            {result.text || <span className="pr-loading">（无结果）</span>}
-          </p>
+          <div className="pr-result-row">
+            <p className="pr-result">
+              {result.text || <span className="pr-loading">（无结果）</span>}
+            </p>
+            <ShadowSpeaker text={result.text} title="朗读译文" />
+          </div>
           <div className="pr-actions">
-            <button type="button" className="pr-icon" title="朗读原文" onClick={() => void speak(text)}>
-              🔊 原文
-            </button>
-            <button type="button" className="pr-icon" title="朗读译文" onClick={() => void speak(result.text)}>
-              🔊 译文
+            <button
+              type="button"
+              className="pr-icon"
+              title="朗读原文"
+              onClick={(e) => {
+                e.stopPropagation();
+                void speak(text).catch((err) => console.warn('TTS failed', err));
+              }}
+            >
+              <VolumeIcon /> 原文
             </button>
             <button
               type="button"
@@ -83,7 +112,7 @@ export function SelectionPopup({
               title="复制译文"
               onClick={() => void navigator.clipboard.writeText(result.text)}
             >
-              复制
+              复制译文
             </button>
           </div>
         </>
