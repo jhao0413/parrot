@@ -1,0 +1,85 @@
+import { PARA_ATTR, TRANS_ATTR } from './walker';
+
+/**
+ * 译文插入：段落后平级插入兄弟节点（不动原 DOM 结构内部），
+ * 译文节点 translate="no" 防级联翻译，样式走注入的 <style>（扩展注入不受页面 CSP 限制）。
+ */
+
+const STYLE_ID = 'parrot-trans-style';
+
+const STYLE_CSS = `
+[data-mt-trans] {
+  display: block;
+  margin: 0.25em 0;
+  color: inherit;
+  font-family: inherit;
+  font-size: 0.95em;
+  line-height: 1.6;
+  opacity: 0.85;
+}
+[data-mt-trans].parrot-loading {
+  color: #9ca3af;
+}
+[data-mt-trans].parrot-loading::after {
+  content: '…';
+  animation: parrot-dots 1.2s infinite steps(4);
+}
+@keyframes parrot-dots {
+  0% { content: ''; }
+  25% { content: '.'; }
+  50% { content: '..'; }
+  75% { content: '...'; }
+}
+html[data-parrot-mode='translationOnly'] [data-mt-p] {
+  display: none;
+}
+`;
+
+function ensureStyle(): void {
+  if (document.getElementById(STYLE_ID)) return;
+  const style = document.createElement('style');
+  style.id = STYLE_ID;
+  style.textContent = STYLE_CSS;
+  document.head.appendChild(style);
+}
+
+function isInlineParagraph(el: HTMLElement): boolean {
+  return getComputedStyle(el).display === 'inline';
+}
+
+/** 翻译请求发出前插入加载占位 */
+export function injectPlaceholder(paragraph: HTMLElement, id: string): HTMLElement {
+  ensureStyle();
+  const node = document.createElement(isInlineParagraph(paragraph) ? 'span' : 'div');
+  node.setAttribute(TRANS_ATTR, id);
+  node.setAttribute('translate', 'no');
+  node.classList.add('parrot-loading');
+  node.textContent = '';
+  node.lang = '';
+  paragraph.after(node);
+  return node;
+}
+
+/** 结果回来填充；失败则移除占位 */
+export function fillTranslation(id: string, text: string | null): void {
+  const node = document.querySelector(`[${TRANS_ATTR}="${CSS.escape(id)}"]`);
+  if (!node) return;
+  if (text === null) {
+    node.remove();
+    return;
+  }
+  node.textContent = text;
+  node.classList.remove('parrot-loading');
+}
+
+/** 设置展示模式（双语 / 仅译文） */
+export function setMode(mode: 'bilingual' | 'translationOnly'): void {
+  document.documentElement.setAttribute('data-parrot-mode', mode);
+}
+
+/** 移除所有译文节点 */
+export function removeAllTranslations(): void {
+  document.querySelectorAll(`[${TRANS_ATTR}]`).forEach((el) => el.remove());
+  document.documentElement.removeAttribute('data-parrot-mode');
+  document.getElementById(STYLE_ID)?.remove();
+}
