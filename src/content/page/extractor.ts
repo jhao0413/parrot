@@ -1,8 +1,18 @@
-import { TRANS_ATTR } from './walker';
+import { TRANS_ATTR, type Paragraph } from './walker';
 import { hasLetters } from '@/translate/lang';
 
-/** 段落文本抽取：子树文本聚合，<br> → \n；过滤噪声段落 */
-export function extractText(el: Element): string {
+const INLINE_DISPLAYS = new Set(['inline', 'inline-block', 'inline-flex', 'inline-grid', 'contents', 'ruby', 'ruby-text']);
+
+/** 行内判断（inline 模式下只收行内子树，跳过块级子元素避免与其译文重复） */
+function isInlineNode(el: Element): boolean {
+  return INLINE_DISPLAYS.has(getComputedStyle(el).display);
+}
+
+/**
+ * 段落文本抽取：<br> → \n；跳过自己注入的译文和不可见标签。
+ * mode='inline' 时只收直属行内内容（块级子元素留给它们自己的段落）。
+ */
+export function extractText(el: Element, mode: Paragraph['mode'] = 'subtree'): string {
   let out = '';
   for (const node of el.childNodes) {
     if (node.nodeType === Node.TEXT_NODE) {
@@ -15,7 +25,8 @@ export function extractText(el: Element): string {
         continue;
       }
       if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'SVG'].includes(child.tagName)) continue;
-      out += extractText(child);
+      if (mode === 'inline' && !isInlineNode(child)) continue;
+      out += extractText(child, 'subtree'); // 行内子树整体收下
     }
   }
   return out;

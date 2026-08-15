@@ -1,9 +1,11 @@
 import { sendBg, type BatchTranslateData } from '@/messaging/protocol';
-import { extractText } from './extractor';
+import { extractText, isTranslatable } from './extractor';
+import { MODE_ATTR, PARA_ATTR, type Paragraph } from './walker';
 
 /**
  * 懒翻译：IntersectionObserver（rootMargin 600px 前缀区），
  * 进入视口附近的段落进入待译队列，300ms 防抖或满 16 段批量发送。
+ * 失败的段落自动重试一次（1.5s 后），仍失败才回调 onFail。
  */
 
 const ROOT_MARGIN = '600px';
@@ -11,10 +13,13 @@ const BATCH_SIZE = 16;
 const FLUSH_DELAY = 300;
 /** 单批字符上限，规避 MV3 service worker 30s 回收 */
 const BATCH_CHARS = 3000;
+const RETRY_DELAY = 1500;
 
 export class LazyTranslator {
   private observer: IntersectionObserver;
   private pending = new Map<string, string>(); // id → text
+  private els = new Map<string, HTMLElement>(); // id → 元素（重试找回用）
+  private retried = new Set<string>();
   private flushTimer: number | null = null;
   private inFlight = false;
 
@@ -28,24 +33,37 @@ export class LazyTranslator {
           if (!entry.isIntersecting) continue;
           const el = entry.target as HTMLElement;
           this.observer.unobserve(el);
-          void this.enqueue(el);
+          this.enqueue(el);
         }
       },
       { rootMargin: ROOT_MARGIN },
     );
   }
 
-  observe(el: HTMLElement): void {
-    this.observer.observe(el);
+  observe(paragraph: Paragraph): void {
+    this.els.set(paragraph.id, paragraph.el);
+    this.observer.observe(paragraph.el);
   }
 
-  private async enqueue(el: HTMLElement): Promise<void> {
-    const text = extractText(el).trim();
-    if (!text) return;
-    const id = el.getAttribute('data-mt-p');
+  private enqueue(el: HTMLElement): void {
+    const id = el.getAttribute(PARA_ATTR);
     if (!id) return;
+    const mode = el.getAttribute(MODE_ATTR) === 'inline' ? ('inline' as const) : ('subtree' as const);
+    const text = extractText(el, mode).trim();
+    if (!text || !isTranslatable(text)) return; // 空段/纯符号不送翻
     this.pending.set(id, text);
     this.scheduleFlush();
+  }
+
+  /** 失败重试入口（元素还在 DOM 里） */
+  private retryLater(id: string): void {
+    this.retried.add(id);
+    const el = this.els.get(id);
+    if (!el || !el.isConnected) {
+      this.onFail(id);
+      return;
+    }
+    setTimeout(() => this.enqueue(el), RETRY_DELAY);
   }
 
   private scheduleFlush(): void {
@@ -84,9 +102,16 @@ export class LazyTranslator {
       });
       if (res.ok) {
         for (const r of res.data.results) this.onResult(r.id, r.text);
-        for (const id of res.data.failedIds) this.onFail(id);
+        for (const id of res.data.failedIds) {
+          if (this.retried.has(id)) this.onFail(id);
+          else this.retryLater(id);
+        }
       } else {
-        for (const i of items) this.onFail(i.id);
+        // 整批失败（如限流）：可重试的重试，已重试的报失败
+        for (const i of items) {
+          if (this.retried.has(i.id)) this.onFail(i.id);
+          else this.retryLater(i.id);
+        }
       }
     } catch {
       for (const i of items) this.onFail(i.id);
@@ -107,5 +132,7 @@ export class LazyTranslator {
     if (this.flushTimer !== null) clearTimeout(this.flushTimer);
     this.flushTimer = null;
     this.pending.clear();
+    this.els.clear();
+    this.retried.clear();
   }
 }

@@ -1,5 +1,6 @@
 import { PARA_ATTR, TRANS_ATTR } from './walker';
 
+
 /**
  * 译文插入：段落后平级插入兄弟节点（不动原 DOM 结构内部），
  * 译文节点 translate="no" 防级联翻译，样式走注入的 <style>（扩展注入不受页面 CSP 限制）。
@@ -59,10 +60,18 @@ export function injectPlaceholder(paragraph: HTMLElement, id: string): HTMLEleme
   return node;
 }
 
-/** 结果回来填充；失败则移除占位 */
+/**
+ * 结果回来填充；失败则移除占位。
+ * 折叠线下方的段落没有预插占位（懒翻译时才创建），这里自动补建。
+ */
 export function fillTranslation(id: string, text: string | null): void {
-  const node = document.querySelector(`[${TRANS_ATTR}="${CSS.escape(id)}"]`);
-  if (!node) return;
+  let node = document.querySelector(`[${TRANS_ATTR}="${CSS.escape(id)}"]`);
+  if (!node) {
+    if (text === null) return;
+    const paragraph = document.querySelector(`[${PARA_ATTR}="${CSS.escape(id)}"]`);
+    if (!paragraph) return;
+    node = injectPlaceholder(paragraph as HTMLElement, id);
+  }
   if (text === null) {
     node.remove();
     return;

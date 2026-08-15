@@ -2,7 +2,7 @@ import type { BatchTranslateData } from '@/messaging/protocol';
 import { getSettings } from '@/storage/settings';
 import { isChineseText } from '@/translate/lang';
 import { LazyTranslator } from './lazy';
-import { extractText } from './extractor';
+import { extractText, isTranslatable } from './extractor';
 import { fillTranslation, injectPlaceholder, removeAllTranslations, setMode } from './injector';
 import { clearLabels, walkAndLabel } from './walker';
 
@@ -46,19 +46,14 @@ class PageTranslationController {
     );
     this.lazy.setTargetLang(to);
 
-    // 视口内的段落立即出占位，避免滚动时译文"追着跳"
     for (const p of paragraphs) {
-      const rect = p.getBoundingClientRect();
-      if (rect.top < window.innerHeight + 600) {
-        const id = p.getAttribute('data-mt-p')!;
-        const text = extractText(p).trim();
-        if (text) {
-          injectPlaceholder(p, id);
-          this.lazy.observe(p); // 已在视口内会立刻触发 enqueue
-        }
-      } else {
-        this.lazy.observe(p);
+      // 视口附近且值得翻译的段落先出占位，避免滚动时译文"追着跳"
+      const rect = p.el.getBoundingClientRect();
+      if (rect.top < window.innerHeight + 600 && rect.bottom > -600) {
+        const text = extractText(p.el, p.mode);
+        if (isTranslatable(text)) injectPlaceholder(p.el, p.id);
       }
+      this.lazy.observe(p); // 已在视口内会立刻触发 enqueue
     }
     this.on = true;
   }
