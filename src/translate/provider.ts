@@ -38,10 +38,18 @@ export interface TranslateProvider {
 
 import { googleProvider } from './providers/google';
 import { microsoftProvider } from './providers/microsoft';
+import { openaiProvider } from './providers/openai';
+import { geminiProvider } from './providers/gemini';
+import { youdaoProvider } from './providers/youdao';
+import { baiduProvider } from './providers/baidu';
 
 const registry: Record<string, TranslateProvider> = {
   google: googleProvider,
   microsoft: microsoftProvider,
+  openai: openaiProvider,
+  gemini: geminiProvider,
+  youdao: youdaoProvider,
+  baidu: baiduProvider,
 };
 
 export function getProvider(id: string): TranslateProvider | undefined {
