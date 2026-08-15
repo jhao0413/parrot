@@ -52,6 +52,8 @@ export class LazyTranslator {
   constructor(
     private onResult: (id: string, text: string) => void,
     private onFail: (id: string) => void,
+    /** 入队回调：段落后插入加载占位（幂等） */
+    private onPending?: (el: HTMLElement, items: { id: string; text: string }[]) => void,
   ) {
     this.observer = new IntersectionObserver(
       (entries) => {
@@ -77,7 +79,9 @@ export class LazyTranslator {
     const mode = el.getAttribute(MODE_ATTR) === 'inline' ? ('inline' as const) : ('subtree' as const);
     const text = extractText(el, mode).trim();
     if (!text || !isTranslatable(text)) return; // 空段/纯符号不送翻
-    for (const item of chunkParagraph(id, text)) this.pending.set(item.id, item.text);
+    const items = chunkParagraph(id, text);
+    for (const item of items) this.pending.set(item.id, item.text);
+    this.onPending?.(el, items); // 立即出 loading 占位
     this.scheduleFlush();
   }
 

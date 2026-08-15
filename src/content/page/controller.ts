@@ -43,11 +43,14 @@ class PageTranslationController {
     this.lazy = new LazyTranslator(
       (id, text) => fillTranslation(id, text),
       (id) => fillTranslation(id, null),
+      (el, items) => {
+        for (const item of items) injectPlaceholder(el, item.id); // 幂等，滚动加载的段落也会先出 loading
+      },
     );
     this.lazy.setTargetLang(to);
 
     for (const p of paragraphs) {
-      // 视口附近且值得翻译的段落先出占位，避免滚动时译文"追着跳"（超长段按分块逐个占位）
+      // 视口附近的段落立即入队出占位（等价于触发一次 enqueue 路径）
       const rect = p.el.getBoundingClientRect();
       if (rect.top < window.innerHeight + 600 && rect.bottom > -600) {
         const text = extractText(p.el, p.mode);

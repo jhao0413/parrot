@@ -16,20 +16,29 @@ const STYLE_CSS = `
   font-family: inherit;
   font-size: 0.95em;
   line-height: 1.6;
-  opacity: 0.85;
+}
+[data-mt-trans]:not(.parrot-loading) {
+  text-decoration: underline dotted rgba(128, 128, 128, 0.45);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.25em;
 }
 [data-mt-trans].parrot-loading {
   color: #9ca3af;
 }
-[data-mt-trans].parrot-loading::after {
-  content: '…';
-  animation: parrot-dots 1.2s infinite steps(4);
+[data-mt-trans].parrot-loading::before {
+  content: '';
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  vertical-align: -0.1em;
+  margin-right: 0.35em;
+  animation: parrot-spin 0.8s linear infinite;
 }
-@keyframes parrot-dots {
-  0% { content: ''; }
-  25% { content: '.'; }
-  50% { content: '..'; }
-  75% { content: '...'; }
+@keyframes parrot-spin {
+  to { transform: rotate(360deg); }
 }
 html[data-parrot-mode='translationOnly'] [data-mt-p] {
   display: none;
@@ -48,9 +57,11 @@ function isInlineParagraph(el: HTMLElement): boolean {
   return getComputedStyle(el).display === 'inline';
 }
 
-/** 翻译请求发出前插入加载占位 */
+/** 翻译请求发出前插入加载占位（幂等：同 id 已存在则直接返回） */
 export function injectPlaceholder(paragraph: HTMLElement, id: string): HTMLElement {
   ensureStyle();
+  const existing = document.querySelector(`[${TRANS_ATTR}="${CSS.escape(id)}"]`);
+  if (existing) return existing as HTMLElement;
   const node = document.createElement(isInlineParagraph(paragraph) ? 'span' : 'div');
   node.setAttribute(TRANS_ATTR, id);
   node.setAttribute('translate', 'no');
