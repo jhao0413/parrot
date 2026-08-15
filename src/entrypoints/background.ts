@@ -92,11 +92,13 @@ export default defineBackground(() => {
     await sendTab(tab.id, { type: 'pageTranslation/toggle', on: !isOn });
   });
 
-  // ---- 右键菜单：翻译选中文字 ----
-  browser.contextMenus.create({
-    id: 'parrot-translate-selection',
-    title: '翻译 "%s"',
-    contexts: ['selection'],
+  // ---- 右键菜单：翻译选中文字（SW 重启会重新执行，先清掉旧菜单避免重复 id 报错） ----
+  void browser.contextMenus.removeAll().then(() => {
+    browser.contextMenus.create({
+      id: 'parrot-translate-selection',
+      title: '翻译 "%s"',
+      contexts: ['selection'],
+    });
   });
   browser.contextMenus.onClicked.addListener(async (info, tab) => {
     if (info.menuItemId !== 'parrot-translate-selection' || !tab?.id || !info.selectionText) return;

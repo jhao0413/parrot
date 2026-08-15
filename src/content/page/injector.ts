@@ -55,7 +55,6 @@ export function injectPlaceholder(paragraph: HTMLElement, id: string): HTMLEleme
   node.setAttribute('translate', 'no');
   node.classList.add('parrot-loading');
   node.textContent = '';
-  node.lang = '';
   paragraph.after(node);
   return node;
 }

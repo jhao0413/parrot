@@ -1,4 +1,4 @@
-import { ok, type Response } from '@/messaging/protocol';
+import { ok } from '@/messaging/protocol';
 import { initSelection } from './selection';
 import { pageTranslation } from './page/controller';
 
@@ -9,17 +9,18 @@ export function initContent(): void {
 
   initSelection();
 
-  browser.runtime.onMessage.addListener((msg: { type?: string; on?: boolean }) => {
+  browser.runtime.onMessage.addListener((msg: { type?: string; on?: boolean }, _sender, sendResponse) => {
     switch (msg?.type) {
       case 'pageTranslation/toggle':
         void pageTranslation.toggle(msg.on === true);
         break;
-      case 'pageTranslation/state': // 同步回复当前状态
-        return ok({ on: pageTranslation.isOn() }) as Response<{ on: boolean }>;
-      default:
+      case 'pageTranslation/state':
+        // 原生 chrome API：必须用 sendResponse 回传（返回值会被忽略）
+        sendResponse(ok({ on: pageTranslation.isOn() }));
         break;
+      default:
+        break; // selection/showTranslation 由 selection 模块自己的 listener 处理
     }
-    // selection/showTranslation 由 selection 模块自己的 listener 处理
   });
 }
 

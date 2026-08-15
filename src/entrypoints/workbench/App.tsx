@@ -26,8 +26,10 @@ function App() {
   // 输入防抖 500ms 自动翻译
   useEffect(() => {
     if (!input.trim()) {
+      seq.current++; // 作废在途请求，防止过期结果写回
       setResult(null);
       setError(null);
+      setLoading(false);
       return;
     }
     const mySeq = ++seq.current;
