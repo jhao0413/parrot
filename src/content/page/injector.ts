@@ -18,7 +18,7 @@ const STYLE_CSS = `
   line-height: 1.6;
 }
 [data-mt-trans]:not(.parrot-loading) {
-  text-decoration: underline dotted #3b82f6;
+  text-decoration: underline dashed #3b82f6;
   text-decoration-thickness: 1.5px;
   text-underline-offset: 0.25em;
 }
