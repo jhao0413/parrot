@@ -23,6 +23,20 @@ export function langName(code: string): string {
   return LANG_NAMES[code] ?? LANGUAGES[code as keyof typeof LANGUAGES] ?? code;
 }
 
+/**
+ * 剥掉推理模型（DeepSeek-R1/reasoner 等）输出的 <think>...</think> 思考段，
+ * 以及被截断未闭合的 <think>。必须在解析编号行之前调用。
+ */
+export function stripReasoning(text: string): string {
+  let out = text;
+  if (out.includes('</think>')) {
+    out = out.slice(out.lastIndexOf('</think>') + '</think>'.length);
+  }
+  const open = out.lastIndexOf('<think>');
+  if (open !== -1) out = out.slice(0, open);
+  return out.trim();
+}
+
 function systemPrompt(to: string): string {
   return [
     'You are a professional translation engine. Translate the user content into ' + langName(to) + '.',
@@ -58,7 +72,7 @@ async function chat(cfg: ProviderCfg, messages: { role: string; content: string 
   const body = (await res.json()) as { choices?: ChatChoice[] };
   const content = body.choices?.[0]?.message?.content;
   if (!content) throw new ProviderError('PROVIDER_ERROR', 'LLM 返回为空');
-  return content;
+  return stripReasoning(content);
 }
 
 function parseNumbered(output: string, count: number): string[] | null {

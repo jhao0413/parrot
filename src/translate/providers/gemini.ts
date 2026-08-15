@@ -1,5 +1,5 @@
 import { ProviderError, type ProviderCfg, type TranslateProvider, type TranslateRequest, type TranslateResponse } from '../provider';
-import { langName } from './openai';
+import { langName, stripReasoning } from './openai';
 
 /** Google Gemini API（generateContent），批量同 OpenAI 的编号行协议 */
 
@@ -28,7 +28,7 @@ async function generate(cfg: ProviderCfg, system: string, user: string, signal?:
   const body = (await res.json()) as GeminiResponse;
   const text = body.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('');
   if (!text) throw new ProviderError('PROVIDER_ERROR', 'Gemini 返回为空');
-  return text;
+  return stripReasoning(text);
 }
 
 function parseNumbered(output: string, count: number): string[] | null {
