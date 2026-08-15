@@ -20,6 +20,17 @@ const BLOCK_DISPLAYS = new Set([
   'block', 'flex', 'grid', 'list-item', 'table', 'table-row', 'table-cell', 'table-caption', 'flow-root',
 ]);
 
+/**
+ * 语义上的块级标签：即使被站点 CSS 改成 display:inline（write.as 等主题就这么干），仍按块处理。
+ * 见 https://blog.senko.net 一例：article 内所有 p/h1-h6 均为 inline。
+ */
+const INTRINSIC_BLOCK_TAGS = new Set([
+  'P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
+  'UL', 'OL', 'LI', 'BLOCKQUOTE', 'DL', 'DT', 'DD', 'FIGCAPTION',
+  'TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'TD', 'TH',
+  'SECTION', 'ARTICLE', 'ASIDE', 'MAIN', 'ADDRESS', 'DETAILS', 'SUMMARY',
+]);
+
 const MAX_PARAGRAPHS = 3000;
 
 export interface Paragraph {
@@ -40,7 +51,11 @@ function displayOf(el: Element): string {
   return getComputedStyle(el).display;
 }
 
-function isBlockDisplay(display: string): boolean {
+/** 块级判定：display:none 排除；语义块级标签优先于 computed display */
+export function isBlockEl(el: Element): boolean {
+  const display = displayOf(el);
+  if (display === 'none') return false;
+  if (INTRINSIC_BLOCK_TAGS.has(el.tagName)) return true;
   return BLOCK_DISPLAYS.has(display);
 }
 
@@ -72,7 +87,7 @@ export function walkAndLabel(root: ParentNode): Paragraph[] {
     const display = displayOf(el);
     // contents 是透明容器（子元素直接参与父级布局），按容器下钻；
     // 其余非块级元素（inline 等）不单独成段，由父级的行内收集覆盖
-    if (!isBlockDisplay(display) && display !== 'contents') return;
+    if (!isBlockEl(el) && display !== 'contents') return;
 
     const blockKids: Element[] = [];
     let hasDirectInline = false;
@@ -89,7 +104,7 @@ export function walkAndLabel(root: ParentNode): Paragraph[] {
         }
         return;
       }
-      if (isBlockDisplay(childDisplay)) blockKids.push(child);
+      if (isBlockEl(child)) blockKids.push(child);
       else hasDirectInline = true; // inline / inline-block 等，属于父级行内内容
     }
 

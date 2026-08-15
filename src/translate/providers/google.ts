@@ -32,7 +32,13 @@ async function gtxTranslate(
     dt: 't',
     q: req.text,
   });
-  const res = await fetch(`https://translate.googleapis.com/translate_a/single?${params}`, { signal });
+  // 用 POST 避免 GET URL 长度限制（gtx 对表单 POST 行为一致）
+  const res = await fetch('https://translate.googleapis.com/translate_a/single', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+    body: params.toString(),
+    signal,
+  });
   if (res.status === 429) throw new ProviderError('RATE_LIMIT', 'Google 翻译请求过于频繁，请稍后重试');
   if (!res.ok) throw new ProviderError('NETWORK', `Google 翻译请求失败: HTTP ${res.status}`);
   const body = (await res.json()) as unknown as GtxResponse;

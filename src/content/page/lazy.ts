@@ -14,6 +14,32 @@ const FLUSH_DELAY = 300;
 /** 单批字符上限，规避 MV3 service worker 30s 回收 */
 const BATCH_CHARS = 3000;
 const RETRY_DELAY = 1500;
+/** 单段超长时按句子边界分块（子段 id 格式 `<id>:<k>`） */
+const PARAGRAPH_CHUNK = 1000;
+
+/** 超长段落分块：优先句子边界，找不到则硬切 */
+export function chunkParagraph(id: string, text: string): { id: string; text: string }[] {
+  if (text.length <= PARAGRAPH_CHUNK) return [{ id, text }];
+  const parts: string[] = [];
+  let rest = text;
+  while (rest.length > PARAGRAPH_CHUNK) {
+    const window = rest.slice(0, PARAGRAPH_CHUNK);
+    const cut = Math.max(
+      window.lastIndexOf('. '),
+      window.lastIndexOf('。'),
+      window.lastIndexOf('！'),
+      window.lastIndexOf('？'),
+      window.lastIndexOf('! '),
+      window.lastIndexOf('? '),
+      window.lastIndexOf('\n'),
+    );
+    const at = cut > PARAGRAPH_CHUNK / 2 ? cut + 1 : PARAGRAPH_CHUNK;
+    parts.push(rest.slice(0, at).trim());
+    rest = rest.slice(at);
+  }
+  if (rest.trim()) parts.push(rest.trim());
+  return parts.map((t, k) => ({ id: `${id}:${k}`, text: t }));
+}
 
 export class LazyTranslator {
   private observer: IntersectionObserver;
@@ -51,7 +77,7 @@ export class LazyTranslator {
     const mode = el.getAttribute(MODE_ATTR) === 'inline' ? ('inline' as const) : ('subtree' as const);
     const text = extractText(el, mode).trim();
     if (!text || !isTranslatable(text)) return; // 空段/纯符号不送翻
-    this.pending.set(id, text);
+    for (const item of chunkParagraph(id, text)) this.pending.set(item.id, item.text);
     this.scheduleFlush();
   }
 

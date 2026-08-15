@@ -63,12 +63,14 @@ export function injectPlaceholder(paragraph: HTMLElement, id: string): HTMLEleme
 /**
  * 结果回来填充；失败则移除占位。
  * 折叠线下方的段落没有预插占位（懒翻译时才创建），这里自动补建。
+ * 超长段分块的子段 id 形如 "5:0"，主段落元素按 "5" 查找。
  */
 export function fillTranslation(id: string, text: string | null): void {
   let node = document.querySelector(`[${TRANS_ATTR}="${CSS.escape(id)}"]`);
   if (!node) {
     if (text === null) return;
-    const paragraph = document.querySelector(`[${PARA_ATTR}="${CSS.escape(id)}"]`);
+    const mainId = id.split(':')[0]!;
+    const paragraph = document.querySelector(`[${PARA_ATTR}="${CSS.escape(mainId)}"]`);
     if (!paragraph) return;
     node = injectPlaceholder(paragraph as HTMLElement, id);
   }

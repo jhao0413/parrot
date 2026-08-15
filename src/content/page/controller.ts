@@ -1,7 +1,7 @@
 import type { BatchTranslateData } from '@/messaging/protocol';
 import { getSettings } from '@/storage/settings';
 import { isChineseText } from '@/translate/lang';
-import { LazyTranslator } from './lazy';
+import { LazyTranslator, chunkParagraph } from './lazy';
 import { extractText, isTranslatable } from './extractor';
 import { fillTranslation, injectPlaceholder, removeAllTranslations, setMode } from './injector';
 import { clearLabels, walkAndLabel } from './walker';
@@ -47,11 +47,13 @@ class PageTranslationController {
     this.lazy.setTargetLang(to);
 
     for (const p of paragraphs) {
-      // 视口附近且值得翻译的段落先出占位，避免滚动时译文"追着跳"
+      // 视口附近且值得翻译的段落先出占位，避免滚动时译文"追着跳"（超长段按分块逐个占位）
       const rect = p.el.getBoundingClientRect();
       if (rect.top < window.innerHeight + 600 && rect.bottom > -600) {
         const text = extractText(p.el, p.mode);
-        if (isTranslatable(text)) injectPlaceholder(p.el, p.id);
+        if (isTranslatable(text)) {
+          for (const item of chunkParagraph(p.id, text)) injectPlaceholder(p.el, item.id);
+        }
       }
       this.lazy.observe(p); // 已在视口内会立刻触发 enqueue
     }

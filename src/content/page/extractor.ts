@@ -1,12 +1,5 @@
-import { TRANS_ATTR, type Paragraph } from './walker';
+import { TRANS_ATTR, isBlockEl, type Paragraph } from './walker';
 import { hasLetters } from '@/translate/lang';
-
-const INLINE_DISPLAYS = new Set(['inline', 'inline-block', 'inline-flex', 'inline-grid', 'contents', 'ruby', 'ruby-text']);
-
-/** 行内判断（inline 模式下只收行内子树，跳过块级子元素避免与其译文重复） */
-function isInlineNode(el: Element): boolean {
-  return INLINE_DISPLAYS.has(getComputedStyle(el).display);
-}
 
 /**
  * 段落文本抽取：<br> → \n；跳过自己注入的译文和不可见标签。
@@ -25,7 +18,7 @@ export function extractText(el: Element, mode: Paragraph['mode'] = 'subtree'): s
         continue;
       }
       if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'SVG'].includes(child.tagName)) continue;
-      if (mode === 'inline' && !isInlineNode(child)) continue;
+      if (mode === 'inline' && isBlockEl(child)) continue;
       out += extractText(child, 'subtree'); // 行内子树整体收下
     }
   }
