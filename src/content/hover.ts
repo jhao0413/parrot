@@ -1,3 +1,4 @@
+import { isContextValid } from '@/messaging/protocol';
 import { getSettings, watchSettings } from '@/storage/settings';
 import { pageTranslation } from './page/controller';
 import { extractText, isTranslatable } from './page/extractor';
@@ -54,6 +55,7 @@ export function initHoverTranslate(): void {
   document.addEventListener('keydown', (e) => {
     // 只响应"单独按 Shift"：Alt+Shift+T（全文翻译开关）等组合键不触发
     if (e.key !== 'Shift' || e.repeat || e.altKey || e.ctrlKey || e.metaKey || !enabled) return;
+    if (!isContextValid()) return; // 扩展已重新加载，旧脚本不再响应
     const el = hovered;
     if (!el || !el.isConnected) return;
     // 焦点在输入框（Shift+字母输大写）或已有选区（Shift 扩选）时不触发
@@ -62,6 +64,8 @@ export function initHoverTranslate(): void {
     if (!window.getSelection()?.isCollapsed) return;
     if (hasTranslation(el)) return;
     if (!isTranslatable(extractText(el, paragraphMode(el)))) return;
-    void getSettings().then((s) => pageTranslation.translateParagraph(el, s.general.targetLang, paragraphMode(el)));
+    void getSettings()
+      .then((s) => pageTranslation.translateParagraph(el, s.general.targetLang, paragraphMode(el)))
+      .catch((err) => console.warn('悬停翻译失败', err));
   });
 }

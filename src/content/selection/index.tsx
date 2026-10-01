@@ -1,4 +1,5 @@
 import { createRoot, type Root } from 'react-dom/client';
+import { isContextValid } from '@/messaging/protocol';
 import { SelectionPopup } from './SelectionPopup';
 import { popupStyles } from './styles';
 
@@ -104,14 +105,17 @@ function showPopup(text: string, rect: DOMRect): void {
       onTranslateParagraph={
         currentAnchorEl && currentAnchorEl.textContent && currentAnchorEl.textContent.trim().length > text.trim().length
           ? () => {
-              void import('../page/controller').then(({ pageTranslation }) => {
-                void (async () => {
-                  const { getSettings } = await import('@/storage/settings');
-                  const settings = await getSettings();
-                  await pageTranslation.translateParagraph(currentAnchorEl!, settings.general.targetLang);
-                })();
-              });
+              const el = currentAnchorEl!; // hideSelectionPopup 会清空 currentAnchorEl，先取出
               hideSelectionPopup();
+              if (!isContextValid()) return;
+              void (async () => {
+                const [{ pageTranslation }, { getSettings }] = await Promise.all([
+                  import('../page/controller'),
+                  import('@/storage/settings'),
+                ]);
+                const settings = await getSettings();
+                await pageTranslation.translateParagraph(el, settings.general.targetLang);
+              })().catch((e) => console.warn('译此段失败', e));
             }
           : null
       }

@@ -107,9 +107,25 @@ export interface BatchTranslateData {
   failedIds: string[];
 }
 
+/** 扩展重新加载/更新后，旧页面里的 content script 与扩展断开，调扩展 API 会抛 "Extension context invalidated" */
+export const CONTEXT_INVALIDATED_MSG = '扩展已更新，请刷新页面后重试';
+
+export function isContextValid(): boolean {
+  try {
+    return !!browser.runtime?.id;
+  } catch {
+    return false;
+  }
+}
+
 /** content / UI 页面 → background */
 export async function sendBg<T>(msg: ExtensionRequest): Promise<Response<T>> {
-  return (await browser.runtime.sendMessage(msg)) as Response<T>;
+  try {
+    return (await browser.runtime.sendMessage(msg)) as Response<T>;
+  } catch (e) {
+    if (!isContextValid()) return err('INTERNAL', CONTEXT_INVALIDATED_MSG);
+    throw e;
+  }
 }
 
 /** background → 某个 tab 的 content script */

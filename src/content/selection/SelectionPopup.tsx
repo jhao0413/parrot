@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react';
-import { sendBg, type DictEntry, type Response, type SingleTranslateResult } from '@/messaging/protocol';
+import {
+  CONTEXT_INVALIDATED_MSG,
+  isContextValid,
+  sendBg,
+  type DictEntry,
+  type Response,
+  type SingleTranslateResult,
+} from '@/messaging/protocol';
 import { getSettings } from '@/storage/settings';
 import { speak, type TtsLang } from '@/tts/player';
 import { VolumeIcon } from '@/ui/SpeakerButton';
@@ -128,17 +135,21 @@ export function SelectionPopup({
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const settings = await getSettings();
-      const res: Response<SingleTranslateResult> = await sendBg({
-        type: 'translate/single',
-        text,
-        from: settings.general.sourceLang,
-        to: settings.general.targetLang,
-        wantDict: settings.page.showDictOnSelection,
-      });
-      if (cancelled) return;
-      if (res.ok) setResult(res.data);
-      else setError(res.error.message);
+      try {
+        const settings = await getSettings();
+        const res: Response<SingleTranslateResult> = await sendBg({
+          type: 'translate/single',
+          text,
+          from: settings.general.sourceLang,
+          to: settings.general.targetLang,
+          wantDict: settings.page.showDictOnSelection,
+        });
+        if (cancelled) return;
+        if (res.ok) setResult(res.data);
+        else setError(res.error.message);
+      } catch (e) {
+        if (!cancelled) setError(isContextValid() ? (e instanceof Error ? e.message : String(e)) : CONTEXT_INVALIDATED_MSG);
+      }
     })();
     return () => {
       cancelled = true;
