@@ -137,17 +137,20 @@ export async function translateSingle(
   const settings = await getSettings();
   const { provider, cfg } = await resolveProvider(settings);
 
-  let dict: DictEntry | undefined;
   const trimmed = text.trim();
   const isWord = /^[a-zA-Z][\w'-]*( [\w'-]+){0,3}$/.test(trimmed);
-  if (wantDict && isWord && provider.dictLookup) {
-    try {
-      dict = (await provider.dictLookup(trimmed, cfg, to)) ?? undefined;
-    } catch {
-      // 词典失败不阻塞翻译
-    }
-  }
+  // 词典与翻译并行请求；词典失败不阻塞翻译
+  const dictPromise: Promise<DictEntry | undefined> =
+    wantDict && isWord && provider.dictLookup
+      ? provider.dictLookup(trimmed, cfg, to).then(
+          (d) => d ?? undefined,
+          () => undefined,
+        )
+      : Promise.resolve(undefined);
 
-  const translated = await translateOneCached(provider.id, cfg, provider, text, from, to);
+  const [translated, dict] = await Promise.all([
+    translateOneCached(provider.id, cfg, provider, text, from, to),
+    dictPromise,
+  ]);
   return { text: translated, dict };
 }
