@@ -1,5 +1,20 @@
 /** 划词弹窗 shadow root 内注入的样式（自包含，不依赖 Tailwind 产物） */
 export const popupStyles = `
+.pr-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #2563eb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+}
+.pr-trigger:hover { background: #eff6ff; }
 .pr-popup {
   width: 340px;
   box-sizing: border-box;

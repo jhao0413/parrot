@@ -3,8 +3,8 @@ import { SelectionPopup } from './SelectionPopup';
 import { popupStyles } from './styles';
 
 /**
- * 划词翻译：mouseup 取词（≤2000 字符），shadow root 弹窗（样式隔离），
- * 基于 range rect 定位 + 视口边缘翻转。
+ * 划词翻译：mouseup 取词（≤2000 字符）后先在选区末尾显示小图标，点击才弹窗翻译；
+ * shadow root 弹窗（样式隔离），基于 range rect 定位 + 视口边缘翻转。
  */
 
 const HOST_ID = 'parrot-selection-host';
@@ -48,6 +48,34 @@ function position(rect: DOMRect): void {
   if (y + POPUP_H_EST > window.innerHeight) y = rect.top - POPUP_H_EST - 8;
   if (y < 8) y = 8;
   host.style.transform = `translate(${x}px, ${y}px)`;
+}
+
+/** 选区末尾的翻译小图标：点击才发起翻译，避免每次选中文字都打扰 */
+function showTrigger(text: string, rect: DOMRect): void {
+  const { root: r } = ensureHost();
+  const SIZE = 26;
+  const x = Math.min(Math.max(rect.right + 4, 8), window.innerWidth - SIZE - 8);
+  let y = rect.bottom + 4;
+  if (y + SIZE > window.innerHeight) y = rect.top - SIZE - 4;
+  if (host) host.style.transform = `translate(${x}px, ${Math.max(y, 8)}px)`;
+  r.render(
+    <button
+      type="button"
+      className="pr-trigger"
+      title="翻译"
+      onMouseDown={(e) => e.preventDefault()} // 不清掉页面选区
+      onClick={() => showPopup(text, rect)}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="m5 8 6 6" />
+        <path d="m4 14 6-6 2-3" />
+        <path d="M2 5h12" />
+        <path d="M7 2h1" />
+        <path d="m22 22-5-10-5 10" />
+        <path d="M14 18h6" />
+      </svg>
+    </button>,
+  );
 }
 
 export function hideSelectionPopup(): void {
@@ -104,8 +132,8 @@ export function initSelection(): void {
     currentAnchorEl =
       (el?.closest('p, h1, h2, h3, h4, h5, h6, li, blockquote, td, dd, dt') as HTMLElement | null) ?? el;
     const rect = selection.getRangeAt(0).getBoundingClientRect();
-    // 等同一次浏览器默认行为结束再弹
-    setTimeout(() => showPopup(text, rect), 10);
+    // 等同一次浏览器默认行为结束再显示图标
+    setTimeout(() => showTrigger(text, rect), 10);
   });
 
   // 点击页面其他地方关闭弹窗
