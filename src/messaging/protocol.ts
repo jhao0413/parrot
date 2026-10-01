@@ -34,8 +34,9 @@ export const translateSingleRequestSchema = z.object({
   wantDict: z.boolean().default(false),
 });
 
-export const ttsGetAudioRequestSchema = z.object({
-  type: z.literal('tts/getAudio'),
+/** 发音：background 取音频后在扩展上下文播放（不受宿主页 CSP media-src 限制） */
+export const ttsSpeakRequestSchema = z.object({
+  type: z.literal('tts/speak'),
   text: z.string().min(1),
   lang: z.enum(['en', 'zh']),
   accent: z.union([z.literal(1), z.literal(2)]).default(2),
@@ -62,7 +63,7 @@ export const selectionShowTranslationSchema = z.object({
 export type ExtensionRequest =
   | z.infer<typeof translateBatchRequestSchema>
   | z.infer<typeof translateSingleRequestSchema>
-  | z.infer<typeof ttsGetAudioRequestSchema>
+  | z.infer<typeof ttsSpeakRequestSchema>
   | z.infer<typeof pageTranslationToggleSchema>
   | z.infer<typeof pageTranslationStateSchema>
   | z.infer<typeof selectionShowTranslationSchema>;
@@ -70,7 +71,7 @@ export type ExtensionRequest =
 export const requestSchema = z.discriminatedUnion('type', [
   translateBatchRequestSchema,
   translateSingleRequestSchema,
-  ttsGetAudioRequestSchema,
+  ttsSpeakRequestSchema,
   pageTranslationToggleSchema,
   pageTranslationStateSchema,
   selectionShowTranslationSchema,
@@ -92,10 +93,6 @@ export interface BatchTranslateData {
   results: TranslateItemResult[];
   /** 部分失败时列出失败的 id，调用方决定如何展示 */
   failedIds: string[];
-}
-
-export interface TtsAudioData {
-  dataUrl: string;
 }
 
 /** content / UI 页面 → background */

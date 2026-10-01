@@ -1,10 +1,9 @@
-import { sendBg, type TtsAudioData } from '@/messaging/protocol';
+import { sendBg } from '@/messaging/protocol';
 
 /**
- * 有道 TTS 播放（统一走 background fetch → data URL，与宿主页 CSP 解耦）。
- * 模块级保存当前 Audio 实现播放互斥。
+ * 有道 TTS 播放：交给 background 取音频并在扩展上下文播放
+ * （content script 里 new Audio 会被宿主页 CSP media-src 拦截）。播放互斥由播放端保证。
  */
-let current: HTMLAudioElement | null = null;
 
 export type TtsLang = 'en' | 'zh';
 
@@ -15,22 +14,11 @@ function detectLang(text: string): TtsLang {
 export async function speak(text: string, lang?: TtsLang, accent?: 1 | 2): Promise<void> {
   const trimmed = text.trim().slice(0, 600);
   if (!trimmed) return;
-  const res = await sendBg<TtsAudioData>({
-    type: 'tts/getAudio',
+  const res = await sendBg<null>({
+    type: 'tts/speak',
     text: trimmed,
     lang: lang ?? detectLang(trimmed),
     accent: accent ?? 2,
   });
   if (!res.ok) throw new Error(res.error.message);
-  stop();
-  current = new Audio(res.data.dataUrl);
-  await current.play();
-}
-
-export function stop(): void {
-  if (current) {
-    current.pause();
-    current.src = '';
-    current = null;
-  }
 }

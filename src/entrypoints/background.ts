@@ -30,9 +30,10 @@ export default defineBackground(() => {
           const data = await translateSingle(req.text, req.from, req.to, req.wantDict);
           return ok(data);
         }
-        case 'tts/getAudio': {
-          const data = await getTtsAudio(req.text, req.lang, req.accent);
-          return ok(data);
+        case 'tts/speak': {
+          const { dataUrl } = await getTtsAudio(req.text, req.lang, req.accent);
+          await playAudio(dataUrl);
+          return ok(null);
         }
         default:
           return err('BAD_REQUEST', `background 不处理该消息: ${(req as { type: string }).type}`);
@@ -50,7 +51,37 @@ export default defineBackground(() => {
     return err('INTERNAL', e instanceof Error ? e.message : String(e));
   }
 
-  // ---- TTS：有道 dictvoice（免签名直接 GET mp3，转 data URL 与页面 CSP 解耦） ----
+  // ---- TTS 播放：不能在 content script 里放（宿主页 CSP media-src 会拦 data: 音频） ----
+  // Chrome：service worker 无 DOM，交给 offscreen document 播放；Firefox：background 是 event page，直接播
+  let bgAudio: HTMLAudioElement | null = null;
+  let creatingOffscreen: Promise<void> | null = null;
+
+  async function ensureOffscreen(): Promise<void> {
+    // AUDIO_PLAYBACK 的 offscreen 静音 30s 后会被自动关闭，每次都查一下
+    const contexts = await browser.runtime.getContexts({ contextTypes: ['OFFSCREEN_DOCUMENT'] });
+    if (contexts.length > 0) return;
+    creatingOffscreen ??= browser.offscreen
+      .createDocument({ url: 'offscreen.html', reasons: ['AUDIO_PLAYBACK'], justification: '播放有道发音' })
+      .finally(() => (creatingOffscreen = null));
+    await creatingOffscreen;
+  }
+
+  async function playAudio(dataUrl: string): Promise<void> {
+    if (!browser.offscreen) {
+      bgAudio?.pause();
+      bgAudio = new Audio(dataUrl);
+      await bgAudio.play();
+      return;
+    }
+    await ensureOffscreen();
+    const res = (await browser.runtime.sendMessage({ target: 'offscreen', type: 'offscreen/play', dataUrl })) as
+      | { ok: true }
+      | { ok: false; error: string }
+      | undefined;
+    if (!res?.ok) throw new Error(`发音播放失败: ${res ? res.error : '无响应'}`);
+  }
+
+  // ---- TTS：有道 dictvoice（免签名直接 GET mp3，转 data URL） ----
   const ttsLru = new Map<string, string>(); // key: lang:accent:text → dataUrl，最多 30 条
   async function getTtsAudio(text: string, lang: 'en' | 'zh', accent: 1 | 2) {
     const truncated = text.slice(0, 600); // 有道约 600 字符截断

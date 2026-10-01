@@ -8,7 +8,7 @@
 - **全文翻译**：双语对照（译文插入原文下方）或仅译文两种模式；懒翻译（进入视口附近才翻译）；`Alt+Shift+T` 快捷键或 popup 开关
 - **悬停段落翻译**：鼠标停在段落内按 `Shift` 即翻译该段（复用全文翻译管线，可在设置页开关）
 - **翻译工作台**：独立页面，粘贴/输入文本自动翻译（防抖 500ms，长文自动分块）
-- **发音**：有道 TTS（免签名，`dict.youdao.com/dictvoice`），英/美音、中文
+- **发音**：有道 TTS（免签名，`dict.youdao.com/dictvoice`），英/美音、中文；在扩展上下文播放（Chrome 用 offscreen document），不受网页 CSP 限制
 
 ## 翻译服务（可插拔）
 
@@ -37,11 +37,11 @@ npm run zip        # 打包 zip
 
 ```
 src/
-├── entrypoints/          # WXT 入口：background / content / popup / options / workbench
+├── entrypoints/          # WXT 入口：background / content / popup / options / workbench / offscreen（发音播放）
 ├── messaging/protocol.ts # 全部消息类型（双端契约，zod 校验）
 ├── translate/            # 纯逻辑：provider 接口 + 5 个实现 + 批量编排 + 缓存
 ├── storage/settings.ts   # zod 设置 schema（读时迁移，无迁移脚本）
-├── tts/player.ts         # 有道 TTS（background 取 data URL → Audio 播放）
+├── tts/player.ts         # 有道 TTS（交给 background 取音频，在 offscreen / background 播放）
 ├── content/
 │   ├── selection/        # 划词弹窗（shadow root + 自带样式）
 │   └── page/             # 全文翻译管线：walker → extractor → lazy → injector → controller

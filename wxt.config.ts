@@ -8,11 +8,16 @@ export default defineConfig({
   vite: () => ({
     plugins: [tailwindcss()],
   }),
-  manifest: {
+  manifest: ({ browser }) => ({
     name: 'Parrot 翻译',
     description: '划词翻译 / 全文双语翻译 / 翻译工作台，支持有道发音',
     default_locale: undefined,
-    permissions: ['storage', 'contextMenus'],
+    // offscreen：Chrome 下发音在 offscreen document 播放（Firefox 无此 API，background 直接播）
+    permissions: [
+      'storage',
+      'contextMenus',
+      ...(browser === 'firefox' ? [] : ['offscreen']),
+    ],
     host_permissions: ['<all_urls>'],
     commands: {
       'toggle-translate-page': {
@@ -20,5 +25,5 @@ export default defineConfig({
         description: '翻译/还原当前页面',
       },
     },
-  },
+  }),
 });
