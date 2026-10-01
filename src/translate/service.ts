@@ -142,7 +142,7 @@ export async function translateSingle(
   const isWord = /^[a-zA-Z][\w'-]*( [\w'-]+){0,3}$/.test(trimmed);
   if (wantDict && isWord && provider.dictLookup) {
     try {
-      dict = (await provider.dictLookup(trimmed, cfg)) ?? undefined;
+      dict = (await provider.dictLookup(trimmed, cfg, to)) ?? undefined;
     } catch {
       // 词典失败不阻塞翻译
     }

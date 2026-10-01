@@ -107,9 +107,10 @@ export default function App() {
             [
               ['google', 'Google（免费）'],
               ['microsoft', '微软（免费）'],
+              ['youdaoWeb', '有道（免费）'],
               ['openai', 'OpenAI 兼容'],
               ['gemini', 'Gemini'],
-              ['youdao', '有道'],
+              ['youdao', '有道（官方 API）'],
               ['baidu', '百度'],
             ] as const
           ).map(([id, name]) => (

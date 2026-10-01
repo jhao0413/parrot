@@ -1,3 +1,4 @@
+import type { DictEntry } from '@/messaging/protocol';
 import { ProviderError, type ProviderCfg, type TranslateProvider, type TranslateRequest, type TranslateResponse } from '../provider';
 import { normalizeLang } from '../lang';
 
@@ -6,6 +7,8 @@ import { normalizeLang } from '../lang';
  * GET https://translate.googleapis.com/translate_a/single?client=gtx&sl=<from>&tl=<to>&dt=t&q=<text>
  * 无需 key、无需签名。返回嵌套数组：[[["译文","原文",...],...],..., "<detectedLang>", ...]
  * 拼接每个片段的 [0] 即完整译文。
+ *
+ * 查词：同一接口加 dt=bd（按词性的译法）/ rm（音标）/ md（英文释义）/ ex（释义例句），hl 决定词性名语言。
  */
 
 function mapLang(code: string): string {
@@ -48,9 +51,51 @@ async function gtxTranslate(
   return { text, detectedFrom: body[2] ? normalizeLang(body[2]) : undefined };
 }
 
+/** dt=bd 每项：[词性名, 译法列表, ...]；dt=md 每项：[词性名, [[释义, id, 例句?], ...], ...] */
+type GtxDictBody = [
+  (string | null)[][] | null, // [0] 片段；末项 [null, null, 原文拼音, 原文音标]
+  [string, string[]][] | null, // [1] bd
+  ...unknown[],
+];
+
+async function gtxDictLookup(word: string, _cfg: ProviderCfg, to: string): Promise<DictEntry | null> {
+  const params = new URLSearchParams({ client: 'gtx', sl: 'auto', tl: mapLang(to), hl: mapLang(to), q: word });
+  for (const dt of ['t', 'bd', 'rm', 'md', 'ex']) params.append('dt', dt); // md 的例句需要 ex 才返回
+  const res = await fetch('https://translate.googleapis.com/translate_a/single', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+    body: params.toString(),
+  });
+  if (!res.ok) throw new ProviderError('NETWORK', `Google 词典请求失败: HTTP ${res.status}`);
+  const body = (await res.json()) as GtxDictBody;
+  const md = (body[12] ?? []) as [string, [string, string, string?][]][];
+
+  const parts = (body[1] ?? [])
+    .filter(([pos, terms]) => pos && terms?.length)
+    .map(([pos, terms]) => ({ pos, means: terms.slice(0, 8).join('；') }));
+  const definitions = md
+    .filter(([pos, items]) => pos && items?.length)
+    .slice(0, 3)
+    .map(([pos, items]) => ({
+      pos,
+      items: items.slice(0, 2).map(([text, , example]) => ({ text, example: example || undefined })),
+    }));
+  if (!parts.length && !definitions.length) return null;
+
+  const phonetic = body[0]?.find((seg) => typeof seg?.[3] === 'string')?.[3] as string | undefined;
+  return {
+    word,
+    phonetic: phonetic ? `/${phonetic}/` : undefined,
+    explanations: parts.map((p) => `${p.pos} ${p.means}`),
+    parts,
+    definitions,
+  };
+}
+
 export const googleProvider: TranslateProvider = {
   id: 'google',
   name: 'Google 翻译（免费）',
   requiresKey: false,
   translate: gtxTranslate,
+  dictLookup: gtxDictLookup,
 };

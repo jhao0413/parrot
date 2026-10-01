@@ -6,11 +6,12 @@ export const settingsSchema = z.object({
     sourceLang: z.string().prefault('auto'),
   }).prefault({}),
   provider: z.object({
-    active: z.enum(['google', 'microsoft', 'openai', 'gemini', 'youdao', 'baidu']).prefault('google'),
+    active: z.enum(['google', 'microsoft', 'youdaoWeb', 'openai', 'gemini', 'youdao', 'baidu']).prefault('google'),
     configs: z
       .object({
         google: z.object({}).prefault({}),
         microsoft: z.object({}).prefault({}),
+        youdaoWeb: z.object({}).prefault({}),
         openai: z
           .object({
             baseUrl: z.string().prefault('https://api.openai.com/v1'),

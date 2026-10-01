@@ -5,6 +5,18 @@ export interface DictEntry {
   word: string;
   phonetic?: string;
   explanations: string[];
+  /** 以下为富词典字段（有道词典提供），其他 provider 可不填 */
+  phonetics?: { accent: 'us' | 'uk'; value: string }[];
+  /** 考试标签，如 CET4 / IELTS */
+  tags?: string[];
+  /** 词性释义，如 { pos: 'adj.', means: '完全的…' } */
+  parts?: { pos: string; means: string }[];
+  /** 词形变化，如 { name: '过去式', words: ['completed'] } */
+  forms?: { name: string; words: string[] }[];
+  /** 网络词组 */
+  phrases?: { text: string; means: string[] }[];
+  /** 英文释义（Google 提供），按词性分组，可带例句 */
+  definitions?: { pos: string; items: { text: string; example?: string }[] }[];
 }
 
 export interface TranslateItemResult {

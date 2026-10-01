@@ -14,8 +14,9 @@
 
 | 服务 | 类型 | 需要 Key |
 |---|---|---|
-| Google 翻译（默认） | 免费网页接口 | ❌ 开箱即用 |
+| Google 翻译（默认） | 免费网页接口，含词典查询（词性译法 + 英文释义） | ❌ 开箱即用 |
 | 微软翻译 | 免费网页接口（Edge 内置同款） | ❌ |
+| 有道（免费） | 有道网页版接口（非官方，可能随改版失效），含完整词典查询 | ❌ |
 | OpenAI 兼容 | LLM（baseUrl 可配，兼容 DeepSeek 等） | ✅ |
 | Gemini | LLM | ✅ |
 | 有道智云 | 官方 API，含词典查询 | ✅ |
@@ -39,7 +40,7 @@ npm run zip        # 打包 zip
 src/
 ├── entrypoints/          # WXT 入口：background / content / popup / options / workbench / offscreen（发音播放）
 ├── messaging/protocol.ts # 全部消息类型（双端契约，zod 校验）
-├── translate/            # 纯逻辑：provider 接口 + 5 个实现 + 批量编排 + 缓存
+├── translate/            # 纯逻辑：provider 接口 + 7 个实现 + 批量编排 + 缓存
 ├── storage/settings.ts   # zod 设置 schema（读时迁移，无迁移脚本）
 ├── tts/player.ts         # 有道 TTS（交给 background 取音频，在 offscreen / background 播放）
 ├── content/

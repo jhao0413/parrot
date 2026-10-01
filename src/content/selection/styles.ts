@@ -17,6 +17,8 @@ export const popupStyles = `
 .pr-trigger:hover { background: #eff6ff; }
 .pr-popup {
   width: 340px;
+  max-height: min(480px, calc(100vh - 16px));
+  overflow-y: auto;
   box-sizing: border-box;
   border-radius: 10px;
   border: 1px solid #e5e7eb;
@@ -93,7 +95,7 @@ export const popupStyles = `
   border-radius: 8px;
   background: #f9fafb;
   padding: 6px 8px;
-  margin-bottom: 8px;
+  margin-top: 8px;
   font-size: 12px;
 }
 .pr-dict-head {
@@ -111,6 +113,43 @@ export const popupStyles = `
   color: #6b7280;
 }
 .pr-dict-list li { line-height: 1.5; }
+.pr-phon-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+.pr-label { flex-shrink: 0; color: #9ca3af; }
+.pr-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.pr-tag {
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 0 4px;
+  font-size: 11px;
+  line-height: 16px;
+  color: #6b7280;
+}
+.pr-def-list {
+  margin: 0;
+  padding-left: 18px;
+}
+.pr-example { color: #9ca3af; }
+.pr-parts, .pr-defs, .pr-forms, .pr-phrases {
+  margin-top: 6px;
+  color: #374151;
+  line-height: 1.6;
+}
+.pr-part {
+  display: flex;
+  gap: 6px;
+}
+.pr-em { color: #2563eb; }
+.pr-part .pr-em { flex-shrink: 0; }
 .pr-actions {
   display: flex;
   gap: 4px;

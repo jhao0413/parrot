@@ -25,15 +25,15 @@ export class ProviderError extends Error {
 }
 
 export interface TranslateProvider {
-  id: 'google' | 'microsoft' | 'openai' | 'gemini' | 'youdao' | 'baidu';
+  id: 'google' | 'microsoft' | 'openai' | 'gemini' | 'youdao' | 'youdaoWeb' | 'baidu';
   name: string;
   requiresKey: boolean;
   /** 单条翻译（必须实现）。service 层负责批量与并发 */
   translate(req: TranslateRequest, cfg: ProviderCfg, signal?: AbortSignal): Promise<TranslateResponse>;
   /** 原生批量翻译（可选）。LLM 用一次 prompt 翻多条 */
   translateBatch?(reqs: TranslateRequest[], cfg: ProviderCfg, signal?: AbortSignal): Promise<TranslateResponse[]>;
-  /** 词典查询（可选），划词时单词优先走词典 */
-  dictLookup?(word: string, cfg: ProviderCfg): Promise<DictEntry | null>;
+  /** 词典查询（可选），划词时单词优先走词典；to 为目标语言（释义语言） */
+  dictLookup?(word: string, cfg: ProviderCfg, to: string): Promise<DictEntry | null>;
 }
 
 import { googleProvider } from './providers/google';
@@ -41,6 +41,7 @@ import { microsoftProvider } from './providers/microsoft';
 import { openaiProvider } from './providers/openai';
 import { geminiProvider } from './providers/gemini';
 import { youdaoProvider } from './providers/youdao';
+import { youdaoWebProvider } from './providers/youdaoWeb';
 import { baiduProvider } from './providers/baidu';
 
 const registry: Record<string, TranslateProvider> = {
@@ -49,6 +50,7 @@ const registry: Record<string, TranslateProvider> = {
   openai: openaiProvider,
   gemini: geminiProvider,
   youdao: youdaoProvider,
+  youdaoWeb: youdaoWebProvider,
   baidu: baiduProvider,
 };
 

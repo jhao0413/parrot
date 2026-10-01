@@ -33,19 +33,26 @@ function ensureHost(): { host: HTMLElement; root: Root } {
   mount.style.pointerEvents = 'auto';
   shadow.appendChild(mount);
   document.body.appendChild(host);
+  new ResizeObserver(() => {
+    if (lastRect && mount.querySelector('.pr-popup')) position(lastRect);
+  }).observe(mount);
   root = createRoot(mount);
   return { host, root };
 }
 
+let lastRect: DOMRect | null = null;
+
+/** 按弹窗实际高度定位（内容异步加载会变高，由 ResizeObserver 重新定位） */
 function position(rect: DOMRect): void {
   if (!host) return;
+  lastRect = rect;
   const POPUP_W = 344;
-  const POPUP_H_EST = 160;
+  const popupH = host.shadowRoot?.querySelector('.pr-popup')?.getBoundingClientRect().height || 160;
   let x = rect.left + rect.width / 2 - POPUP_W / 2;
   x = Math.min(Math.max(x, 8), window.innerWidth - POPUP_W - 8);
   // 默认显示在选区下方，视口放不下则翻转到上方
   let y = rect.bottom + 8;
-  if (y + POPUP_H_EST > window.innerHeight) y = rect.top - POPUP_H_EST - 8;
+  if (y + popupH > window.innerHeight) y = rect.top - popupH - 8;
   if (y < 8) y = 8;
   host.style.transform = `translate(${x}px, ${y}px)`;
 }

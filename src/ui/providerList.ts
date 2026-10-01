@@ -2,9 +2,10 @@
 export const PROVIDER_LIST = [
   { id: 'google', name: 'Google（免费）' },
   { id: 'microsoft', name: '微软（免费）' },
+  { id: 'youdaoWeb', name: '有道（免费）' },
   { id: 'openai', name: 'OpenAI 兼容' },
   { id: 'gemini', name: 'Gemini' },
-  { id: 'youdao', name: '有道' },
+  { id: 'youdao', name: '有道（官方 API）' },
   { id: 'baidu', name: '百度' },
 ] as const;
 

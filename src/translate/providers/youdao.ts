@@ -9,7 +9,7 @@ import type { DictEntry } from '@/messaging/protocol';
  * 单词查询时返回 basic 词典（音标 + 释义），用于 dictLookup。
  */
 
-function mapLang(code: string): string {
+export function mapLang(code: string): string {
   const n = normalizeLang(code);
   if (n === 'zh') return 'zh-CHS';
   if (n === 'zh-TW') return 'zh-CHT';
