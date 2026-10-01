@@ -11,7 +11,8 @@ const STYLE_ID = 'parrot-trans-style';
 const STYLE_CSS = `
 [data-mt-trans] {
   display: block;
-  margin: 0.25em 0;
+  /* --parrot-gap = 原段落 margin-bottom（插入时写入）：上边距抵消它只留小间距贴近原文，下边距补回它保持与下一段的距离 */
+  margin: calc(0.2em - var(--parrot-gap, 0px)) 0 var(--parrot-gap, 0.25em);
   color: inherit;
   font-family: inherit;
   font-size: 0.88em;
@@ -24,26 +25,35 @@ const STYLE_CSS = `
 }
 [data-mt-trans].parrot-loading {
   display: inline-block; /* loading 贴在段末行内，不另起一行 */
-  margin: 0;
-  color: #9ca3af;
+  width: 0.9em;
+  height: 0.9em;
+  margin: 0 0 0 0.4em;
+  vertical-align: -0.1em;
 }
+/* 渐变拖尾的圆环：conic-gradient 由透明到蓝色，mask 挖空中心只留环 */
 [data-mt-trans].parrot-loading::before {
   content: '';
-  display: inline-block;
-  width: 0.85em;
-  height: 0.85em;
-  border: 1.5px solid currentColor;
-  border-top-color: transparent;
+  display: block;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
-  vertical-align: -0.1em;
-  margin-right: 0.35em;
+  background: conic-gradient(transparent 10%, #3b82f6);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 0.15em), #000 calc(100% - 0.14em));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 0.15em), #000 calc(100% - 0.14em));
   animation: parrot-spin 0.8s linear infinite;
 }
 @keyframes parrot-spin {
   to { transform: rotate(360deg); }
 }
+@media (prefers-reduced-motion: reduce) {
+  [data-mt-trans].parrot-loading::before { animation-duration: 2.4s; }
+}
 html[data-parrot-mode='translationOnly'] [data-mt-p] {
   display: none;
+}
+/* 仅译文模式原段落不占位，不能再用负上边距（会压到上一段） */
+html[data-parrot-mode='translationOnly'] [data-mt-trans]:not(.parrot-loading) {
+  margin-top: 0.25em;
 }
 /* 仅译文模式下段落被隐藏，但段内还有行内 loading 时保持原文可见，避免翻译期间空白 */
 html[data-parrot-mode='translationOnly'] [data-mt-p]:has(> .parrot-loading) {
@@ -86,6 +96,8 @@ function moveAfterParagraph(node: Element): void {
     if (sibMain !== mainId) break;
     if (Number(sibChunk) < Number(chunk)) ref = sib;
   }
+  // 同段各分块都带同样的 gap：前一块的下边距被后一块的负上边距抵消，块间同样紧凑
+  (node as HTMLElement).style.setProperty('--parrot-gap', getComputedStyle(paragraph).marginBottom);
   ref.after(node);
 }
 
