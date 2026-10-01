@@ -48,16 +48,13 @@ const STYLE_CSS = `
 @media (prefers-reduced-motion: reduce) {
   [data-mt-trans].parrot-loading::before { animation-duration: 2.4s; }
 }
-html[data-parrot-mode='translationOnly'] [data-mt-p] {
+/* 仅译文模式：只隐藏后面已跟着译文的原段落（翻译中 / 译文被收起时原文保持可见） */
+html[data-parrot-mode='translationOnly'] [data-mt-p]:has(+ [data-mt-trans]) {
   display: none;
 }
 /* 仅译文模式原段落不占位，不能再用负上边距（会压到上一段） */
 html[data-parrot-mode='translationOnly'] [data-mt-trans]:not(.parrot-loading) {
   margin-top: 0.25em;
-}
-/* 仅译文模式下段落被隐藏，但段内还有行内 loading 时保持原文可见，避免翻译期间空白 */
-html[data-parrot-mode='translationOnly'] [data-mt-p]:has(> .parrot-loading) {
-  display: revert;
 }
 `;
 

@@ -5,7 +5,7 @@ import { extractText, isTranslatable } from './page/extractor';
 import { isBlockEl, MODE_ATTR, PARA_ATTR, TRANS_ATTR, type Paragraph } from './page/walker';
 
 /**
- * 悬停段落翻译：鼠标停在段落内时按 Shift 翻译该段，
+ * 悬停段落翻译：鼠标停在段落内时按 Shift 翻译该段，再按一次收起译文；
  * 复用全文翻译的占位/注入管线（"译此段"同款）。
  */
 
@@ -17,7 +17,12 @@ let enabled = true;
 
 /** 悬停目标 → 段落：先按语义标签找；命中不了（正文是 div 的站点）则取最近的块级元素 */
 function paragraphFrom(target: Element): HTMLElement | null {
-  if (target.closest(`[${TRANS_ATTR}]`)) return null; // 悬停在译文上不再翻译
+  // 悬停在译文上：对应回原段落（用于收起译文），而不是把译文当段落再翻译
+  const trans = target.closest(`[${TRANS_ATTR}]`);
+  if (trans) {
+    const mainId = (trans.getAttribute(TRANS_ATTR) ?? '').split(':')[0]!;
+    return document.querySelector<HTMLElement>(`[${PARA_ATTR}="${CSS.escape(mainId)}"]`);
+  }
   const hit = target.closest<HTMLElement>(PARAGRAPH_SELECTOR);
   if (hit) return hit;
   // 深层目标（如 span）向上找最近块级祖先，即鼠标所在"段落"
@@ -29,15 +34,14 @@ function paragraphFrom(target: Element): HTMLElement | null {
   return null;
 }
 
-/** 该段是否已有译文（含加载中；长段分块的子段 id 形如 "5:0"） */
-function hasTranslation(el: HTMLElement): boolean {
+/** 该段的译文节点（含加载中；长段分块的子段 id 形如 "5:0"） */
+function translationsOf(el: HTMLElement): Element[] {
   const id = el.getAttribute(PARA_ATTR);
-  if (id === null) return false;
-  for (const node of document.querySelectorAll(`[${TRANS_ATTR}]`)) {
+  if (id === null) return [];
+  return [...document.querySelectorAll(`[${TRANS_ATTR}]`)].filter((node) => {
     const tid = node.getAttribute(TRANS_ATTR) ?? '';
-    if (tid === id || tid.startsWith(`${id}:`)) return true;
-  }
-  return false;
+    return tid === id || tid.startsWith(`${id}:`);
+  });
 }
 
 function paragraphMode(el: HTMLElement): Paragraph['mode'] {
@@ -62,7 +66,12 @@ export function initHoverTranslate(): void {
     const active = document.activeElement;
     if (active instanceof HTMLElement && active.closest('input, textarea, [contenteditable]')) return;
     if (!window.getSelection()?.isCollapsed) return;
-    if (hasTranslation(el)) return;
+    // 已有译文：再按 Shift 收起（翻译中则不打断）；再按一次会重新翻译（走缓存，几乎即时）
+    const existing = translationsOf(el);
+    if (existing.length > 0) {
+      if (!existing.some((n) => n.classList.contains('parrot-loading'))) existing.forEach((n) => n.remove());
+      return;
+    }
     if (!isTranslatable(extractText(el, paragraphMode(el)))) return;
     void getSettings()
       .then((s) => pageTranslation.translateParagraph(el, s.general.targetLang, paragraphMode(el)))
