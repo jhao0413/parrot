@@ -73,6 +73,29 @@ export default function App() {
       </section>
 
       <section className="space-y-3 rounded-xl bg-white p-5 shadow-sm">
+        <h2 className="text-sm font-medium text-gray-700">页面翻译</h2>
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-gray-500">鼠标悬停段落时按 Shift 翻译该段</span>
+          <div className="flex overflow-hidden rounded-md border border-gray-200 text-xs">
+            <button
+              type="button"
+              className={`px-2 py-1 ${settings.page.shiftTranslate ? 'bg-blue-600 text-white' : 'bg-white text-gray-600'}`}
+              onClick={() => void patch({ page: { shiftTranslate: true } })}
+            >
+              开
+            </button>
+            <button
+              type="button"
+              className={`px-2 py-1 ${!settings.page.shiftTranslate ? 'bg-blue-600 text-white' : 'bg-white text-gray-600'}`}
+              onClick={() => void patch({ page: { shiftTranslate: false } })}
+            >
+              关
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-3 rounded-xl bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-medium text-gray-700">翻译服务</h2>
           <button type="button" onClick={() => void testProvider()} className="rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">
@@ -124,6 +147,12 @@ export default function App() {
               value={cfg.openai.model}
               onChange={(e) => void patch({ provider: { configs: { ...cfg, openai: { ...cfg.openai, model: e.target.value } } } })}
             />
+            <textarea
+              className="min-h-16 w-full rounded-md border border-gray-200 px-2 py-1.5"
+              placeholder="自定义 Prompt（可选，如：保留敬语、术语表、口语化风格…只影响译文风格，不改变输出格式）"
+              value={cfg.openai.prompt}
+              onChange={(e) => void patch({ provider: { configs: { ...cfg, openai: { ...cfg.openai, prompt: e.target.value } } } })}
+            />
           </div>
         )}
 
@@ -141,6 +170,12 @@ export default function App() {
               placeholder="模型（如 gemini-2.0-flash）"
               value={cfg.gemini.model}
               onChange={(e) => void patch({ provider: { configs: { ...cfg, gemini: { ...cfg.gemini, model: e.target.value } } } })}
+            />
+            <textarea
+              className="min-h-16 w-full rounded-md border border-gray-200 px-2 py-1.5"
+              placeholder="自定义 Prompt（可选，只影响译文风格，不改变输出格式）"
+              value={cfg.gemini.prompt}
+              onChange={(e) => void patch({ provider: { configs: { ...cfg, gemini: { ...cfg.gemini, prompt: e.target.value } } } })}
             />
           </div>
         )}

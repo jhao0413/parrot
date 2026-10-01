@@ -3,6 +3,7 @@ import { getSettings } from '@/storage/settings';
 import { isChineseText } from '@/translate/lang';
 import { LazyTranslator, chunkParagraph } from './lazy';
 import { extractText, isTranslatable } from './extractor';
+import type { Paragraph } from './walker';
 import { fillTranslation, injectPlaceholder, removeAllTranslations, setMode } from './injector';
 import { clearLabels, walkAndLabel } from './walker';
 
@@ -71,15 +72,15 @@ class PageTranslationController {
     this.on = false;
   }
 
-  /** 单段翻译（划词弹窗"译此段"按钮复用同一管线） */
-  async translateParagraph(el: HTMLElement, to: string): Promise<void> {
+  /** 单段翻译（划词弹窗"译此段"按钮 / 悬停 Shift 翻译复用同一管线） */
+  async translateParagraph(el: HTMLElement, to: string, mode: Paragraph['mode'] = 'subtree'): Promise<void> {
     let id = el.getAttribute('data-mt-p');
     if (id === null) {
       // 页面未开启全文翻译时，现场标记该段
       id = `manual-${Date.now()}`;
       el.setAttribute('data-mt-p', id);
     }
-    const text = extractText(el).trim();
+    const text = extractText(el, mode).trim();
     if (!text) return;
     injectPlaceholder(el, id);
     const { sendBg } = await import('@/messaging/protocol');

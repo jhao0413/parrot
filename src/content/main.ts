@@ -1,5 +1,6 @@
 import { ok } from '@/messaging/protocol';
 import { initSelection } from './selection';
+import { initHoverTranslate } from './hover';
 import { pageTranslation } from './page/controller';
 
 /** content script 引导：划词模块 + 全文翻译开关消息 */
@@ -8,6 +9,7 @@ export function initContent(): void {
   window.__parrotInjected = true;
 
   initSelection();
+  initHoverTranslate();
 
   browser.runtime.onMessage.addListener((msg: { type?: string; on?: boolean }, _sender, sendResponse) => {
     switch (msg?.type) {

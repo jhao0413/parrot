@@ -16,12 +16,15 @@ export const settingsSchema = z.object({
             baseUrl: z.string().prefault('https://api.openai.com/v1'),
             apiKey: z.string().prefault(''),
             model: z.string().prefault('gpt-4o-mini'),
+            /** 用户自定义补充指令（风格/术语等），追加到 system prompt 末尾 */
+            prompt: z.string().prefault(''),
           })
           .prefault({}),
         gemini: z
           .object({
             apiKey: z.string().prefault(''),
             model: z.string().prefault('gemini-2.0-flash'),
+            prompt: z.string().prefault(''),
           })
           .prefault({}),
         youdao: z
@@ -46,6 +49,8 @@ export const settingsSchema = z.object({
     /** 双语对照 / 仅译文 */
     mode: z.enum(['bilingual', 'translationOnly']).prefault('bilingual'),
     showDictOnSelection: z.boolean().prefault(true),
+    /** 鼠标悬停段落时按 Shift 翻译该段 */
+    shiftTranslate: z.boolean().prefault(true),
   }).prefault({}),
 });
 

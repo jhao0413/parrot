@@ -23,6 +23,8 @@ const STYLE_CSS = `
   text-underline-offset: 0.25em;
 }
 [data-mt-trans].parrot-loading {
+  display: inline-block; /* loading 贴在段末行内，不另起一行 */
+  margin: 0;
   color: #9ca3af;
 }
 [data-mt-trans].parrot-loading::before {
@@ -43,6 +45,10 @@ const STYLE_CSS = `
 html[data-parrot-mode='translationOnly'] [data-mt-p] {
   display: none;
 }
+/* 仅译文模式下段落被隐藏，但段内还有行内 loading 时保持原文可见，避免翻译期间空白 */
+html[data-parrot-mode='translationOnly'] [data-mt-p]:has(> .parrot-loading) {
+  display: revert;
+}
 `;
 
 function ensureStyle(): void {
@@ -53,22 +59,34 @@ function ensureStyle(): void {
   document.head.appendChild(style);
 }
 
-function isInlineParagraph(el: HTMLElement): boolean {
-  return getComputedStyle(el).display === 'inline';
-}
-
-/** 翻译请求发出前插入加载占位（幂等：同 id 已存在则直接返回） */
+/** 翻译请求发出前插入加载占位（幂等：同 id 已存在则直接返回）。
+ *  占位以行内 span 追加在段落末尾（"原文 ⟳"，不另起一行不撑布局）。 */
 export function injectPlaceholder(paragraph: HTMLElement, id: string): HTMLElement {
   ensureStyle();
   const existing = document.querySelector(`[${TRANS_ATTR}="${CSS.escape(id)}"]`);
   if (existing) return existing as HTMLElement;
-  const node = document.createElement(isInlineParagraph(paragraph) ? 'span' : 'div');
+  const node = document.createElement('span');
   node.setAttribute(TRANS_ATTR, id);
   node.setAttribute('translate', 'no');
   node.classList.add('parrot-loading');
   node.textContent = '';
-  paragraph.after(node);
+  paragraph.appendChild(node);
   return node;
+}
+
+/** 结果就绪后把段内行内占位移出为段落后方的平级节点（保持同段分块的先后顺序） */
+function moveAfterParagraph(node: Element): void {
+  const paragraph = node.parentElement;
+  if (!paragraph?.hasAttribute(PARA_ATTR)) return; // 已在段外（重复填充）
+  const [mainId, chunk = '0'] = (node.getAttribute(TRANS_ATTR) ?? '').split(':');
+  // 已移出的同段分块紧跟在段落后；插到最后一个序号比自己小的分块之后（分块可能乱序返回）
+  let ref: Element = paragraph;
+  for (let sib = paragraph.nextElementSibling; sib; sib = sib.nextElementSibling) {
+    const [sibMain, sibChunk = '0'] = (sib.getAttribute(TRANS_ATTR) ?? '').split(':');
+    if (sibMain !== mainId) break;
+    if (Number(sibChunk) < Number(chunk)) ref = sib;
+  }
+  ref.after(node);
 }
 
 /**
@@ -91,6 +109,7 @@ export function fillTranslation(id: string, text: string | null): void {
   }
   node.textContent = text;
   node.classList.remove('parrot-loading');
+  moveAfterParagraph(node); // 行内 loading → 段落后方块级译文
 }
 
 /** 设置展示模式（双语 / 仅译文） */
