@@ -113,26 +113,40 @@ export default defineBackground(() => {
     return btoa(binary);
   }
 
-  // ---- 快捷键：切换当前 tab 全文翻译 ----
+  // ---- 切换某 tab 的全文翻译（快捷键 / 右键菜单共用） ----
+  async function togglePageTranslation(tabId: number): Promise<void> {
+    const state = await sendTab<{ on: boolean }>(tabId, { type: 'pageTranslation/state', on: false });
+    const isOn = state?.ok && state.data.on === true;
+    await sendTab(tabId, { type: 'pageTranslation/toggle', on: !isOn });
+  }
+
   browser.commands.onCommand.addListener(async (command) => {
     if (command !== 'toggle-translate-page') return;
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id) return;
-    const state = await sendTab<{ on: boolean }>(tab.id, { type: 'pageTranslation/state', on: false });
-    const isOn = state?.ok && state.data.on === true;
-    await sendTab(tab.id, { type: 'pageTranslation/toggle', on: !isOn });
+    if (tab?.id) await togglePageTranslation(tab.id);
   });
 
-  // ---- 右键菜单：翻译选中文字（SW 重启会重新执行，先清掉旧菜单避免重复 id 报错） ----
+  // ---- 右键菜单（SW 重启会重新执行，先清掉旧菜单避免重复 id 报错） ----
+  // 选中文字：翻译选中内容；未选中（page）：翻译 / 还原整页
   void browser.contextMenus.removeAll().then(() => {
     browser.contextMenus.create({
       id: 'parrot-translate-selection',
       title: '翻译 "%s"',
       contexts: ['selection'],
     });
+    browser.contextMenus.create({
+      id: 'parrot-toggle-page',
+      title: '翻译 / 还原此页面',
+      contexts: ['page'],
+    });
   });
   browser.contextMenus.onClicked.addListener(async (info, tab) => {
-    if (info.menuItemId !== 'parrot-translate-selection' || !tab?.id || !info.selectionText) return;
+    if (!tab?.id) return;
+    if (info.menuItemId === 'parrot-toggle-page') {
+      await togglePageTranslation(tab.id);
+      return;
+    }
+    if (info.menuItemId !== 'parrot-translate-selection' || !info.selectionText) return;
     const settings = await getSettings();
     await sendTab(tab.id, {
       type: 'selection/showTranslation',
