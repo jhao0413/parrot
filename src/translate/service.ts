@@ -33,11 +33,14 @@ function limiterFor(providerId: string) {
   return l;
 }
 
+const OPTIONAL_CFG_KEYS = new Set(['prompt']);
+
 async function resolveProvider(settings: Settings) {
   const provider = getProvider(settings.provider.active);
   if (!provider) throw new ProviderError('PROVIDER_ERROR', `未知翻译服务: ${settings.provider.active}`);
   const cfg = settings.provider.configs[provider.id] as Record<string, string>;
-  if (provider.requiresKey && Object.values(cfg).some((v) => !v)) {
+  // 选填项（自定义指令）为空不算没配置，否则大模型服务不写指令就永远报"未配置 API Key"
+  if (provider.requiresKey && Object.entries(cfg).some(([k, v]) => !OPTIONAL_CFG_KEYS.has(k) && !v)) {
     throw new ProviderError('NO_KEY', `${provider.name} 未配置 API Key，请在设置页填写`);
   }
   return { provider, cfg };
