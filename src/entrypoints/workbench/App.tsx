@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { sendBg, type Response, type SingleTranslateResult } from '@/messaging/protocol';
 import { getSettings, updateSettings, watchSettings } from '@/storage/settings';
+import { LANGUAGES, normalizeLang } from '@/translate/lang';
 import { LangSelect } from '@/ui/LangSelect';
 import { PROVIDER_LIST, type ProviderId } from '@/ui/providerList';
 import { SpeakerButton } from '@/ui/SpeakerButton';
@@ -9,6 +10,20 @@ import { TranslateResult } from '@/ui/TranslateResult';
 
 /** 长文本按 3500 字符切块顺序翻译 */
 const CHUNK = 3500;
+
+/** 中文为主：汉字数 ≥ 拉丁单词数（中英混排"我在用 React 写 extension"算中文）；含假名的是日文 */
+function looksChinese(text: string): boolean {
+  if (/[\u3040-\u30ff]/.test(text)) return false;
+  const han = (text.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g) ?? []).length;
+  const words = (text.match(/[a-zA-Z]+/g) ?? []).length;
+  return han > 0 && han >= words;
+}
+
+/** 目标语言为「自动」时中⇄英互译：源语言（指定的或从文本判断的）是中文就译成英文，否则译成中文 */
+function autoTarget(from: string, text: string): 'zh' | 'en' {
+  const src = from === 'auto' ? (looksChinese(text) ? 'zh' : 'other') : normalizeLang(from);
+  return src === 'zh' || src === 'zh-TW' ? 'en' : 'zh';
+}
 
 const langSelectClass =
   'min-w-0 max-w-44 cursor-pointer appearance-none truncate rounded-lg bg-transparent bg-[url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2016%2016%27%20fill%3D%27none%27%20stroke%3D%27%2371717a%27%20stroke-width%3D%271.5%27%3E%3Cpath%20d%3D%27M4%206l4%204%204-4%27/%3E%3C/svg%3E")] bg-[length:16px] bg-[right_6px_center] bg-no-repeat py-1.5 ps-2.5 pe-7 text-sm font-medium text-zinc-900 transition-colors duration-150 hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-brand-600 dark:text-zinc-100 dark:hover:bg-white/5 [&>option]:bg-white [&>option]:dark:bg-zinc-800';
@@ -36,7 +51,7 @@ function Icon({ children, className = 'size-4' }: { children: ReactNode; classNa
 function App() {
   const [input, setInput] = useState('');
   const [from, setFrom] = useState('auto');
-  const [to, setTo] = useState('zh');
+  const [to, setTo] = useState('auto');
   const [result, setResult] = useState<SingleTranslateResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -49,11 +64,12 @@ function App() {
   useEffect(() => {
     void getSettings().then((s) => {
       setFrom(s.general.sourceLang);
-      setTo(s.general.targetLang);
       setProvider(s.provider.active);
     });
     watchSettings((s) => setProvider(s.provider.active)); // popup / 设置页切换服务时同步
   }, []);
+
+  const effectiveTo = to === 'auto' ? autoTarget(from, input) : to;
 
   // 输入防抖 500ms 自动翻译；切换服务也重新翻译
   useEffect(() => {
@@ -78,7 +94,7 @@ function App() {
             type: 'translate/single',
             text: chunk,
             from,
-            to,
+            to: effectiveTo,
             wantDict: chunks.length === 1,
           });
           if (mySeq !== seq.current) return; // 输入已更新，丢弃过期结果
@@ -99,18 +115,23 @@ function App() {
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [input, from, to, provider]);
+  }, [input, from, effectiveTo, provider]);
 
   const changeProvider = async (id: ProviderId) => {
     setProvider(id);
     await updateSettings({ provider: { active: id } });
   };
 
-  // 互换语言时把译文搬到左侧，接着反向翻译
+  // 互换语言时把译文搬到左侧，接着反向翻译。目标为「自动」时方向随文本自动翻转，只需搬译文（源语言是指定的则改成刚才的目标）
+  const canSwap = to === 'auto' ? !!result?.text : from !== 'auto';
   const swap = () => {
-    if (from === 'auto') return;
-    setFrom(to);
-    setTo(from);
+    if (!canSwap) return;
+    if (to === 'auto') {
+      if (from !== 'auto') setFrom(effectiveTo);
+    } else {
+      setFrom(to);
+      setTo(from);
+    }
     if (result?.text) setInput(result.text);
     inputRef.current?.focus();
   };
@@ -177,13 +198,16 @@ function App() {
               <LangSelect value={from} onChange={setFrom} includeAuto className={langSelectClass} />
             </div>
             <div className="flex min-w-0 items-center px-3 py-2 ps-8 md:px-4 md:ps-8">
-              <LangSelect value={to} onChange={setTo} className={langSelectClass} />
+              <LangSelect value={to} onChange={setTo} includeAuto autoLabel="自动（中⇄英）" className={langSelectClass} />
+              {to === 'auto' && input.trim() && (
+                <span className="ms-1 truncate text-xs text-zinc-500 dark:text-zinc-400">→ {LANGUAGES[autoTarget(from, input)]}</span>
+              )}
             </div>
             <button
               type="button"
-              title={from === 'auto' ? '源语言为自动检测时无法互换' : '互换语言'}
+              title={canSwap ? '互换语言' : to === 'auto' ? '有译文后可互换' : '源语言为自动检测时无法互换'}
               aria-label="互换语言"
-              disabled={from === 'auto'}
+              disabled={!canSwap}
               onClick={swap}
               className="absolute top-1/2 left-1/2 inline-flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-zinc-500 shadow-[0_0_0_1px_rgb(0_0_0/0.08),0_1px_2px_rgb(0_0_0/0.06)] transition-[color,background-color,scale] duration-150 hover:bg-zinc-50 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-brand-600 active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400 dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)] dark:hover:bg-zinc-700 dark:hover:text-zinc-100 dark:disabled:hover:bg-zinc-800"
             >
