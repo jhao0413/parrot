@@ -90,9 +90,17 @@ const OPENAI_PRESETS = [
   },
 ] as const;
 
+/** 按主域名识别预设：同一服务商的其他接入点（如 MiMo 的 token-plan-cn.xiaomimimo.com）也算该预设 */
 function matchPreset(baseUrl: string) {
-  const norm = (u: string) => u.trim().replace(/\/+$/, '').replace(/\/v1$/, '');
-  return OPENAI_PRESETS.find((p) => norm(p.baseUrl) === norm(baseUrl));
+  const site = (u: string) => {
+    try {
+      return new URL(u.trim()).hostname.split('.').slice(-2).join('.');
+    } catch {
+      return '';
+    }
+  };
+  const target = site(baseUrl);
+  return target ? OPENAI_PRESETS.find((p) => site(p.baseUrl) === target) : undefined;
 }
 
 type Configs = Settings['provider']['configs'];
@@ -144,8 +152,6 @@ export default function App() {
   const [panel, setPanel] = useState<PanelId>(panelFromHash);
   const [saved, setSaved] = useState(false);
   const savedTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const latest = useRef<Settings | null>(null);
-  latest.current = settings;
 
   useEffect(() => {
     void getSettings().then(setSettings);
@@ -159,7 +165,7 @@ export default function App() {
   const pending = useRef(new Set<Promise<Settings>>());
   const flush = () => Promise.all(pending.current);
 
-  const patch = async (p: SettingsPatch) => {
+  const patch = async (p: Parameters<typeof updateSettings>[0]) => {
     const save = updateSettings(p);
     pending.current.add(save);
     const next = await save.finally(() => pending.current.delete(save));
@@ -229,7 +235,7 @@ export default function App() {
               {panel === 'general' && <GeneralPanel s={settings} patch={patch} />}
               {panel === 'page' && <PagePanel s={settings} patch={patch} />}
               {panel === 'subtitle' && <SubtitlePanel s={settings} patch={patch} />}
-              {panel === 'provider' && <ProviderPanel s={settings} latest={latest} patch={patch} flush={flush} />}
+              {panel === 'provider' && <ProviderPanel s={settings} patch={patch} flush={flush} />}
               {panel === 'about' && <AboutPanel />}
             </div>
           )}
@@ -253,7 +259,7 @@ export default function App() {
   );
 }
 
-type PanelProps = { s: Settings; patch: (p: SettingsPatch) => Promise<void> };
+type PanelProps = { s: Settings; patch: (p: SettingsPatch | ((current: Settings) => SettingsPatch)) => Promise<void> };
 
 function GeneralPanel({ s, patch }: PanelProps) {
   return (
@@ -372,27 +378,30 @@ type TestState = { status: 'idle' } | { status: 'loading' } | { status: 'ok' | '
 
 function ProviderPanel({
   s,
-  latest,
   patch,
   flush,
-}: PanelProps & { latest: React.RefObject<Settings | null>; flush: () => Promise<unknown> }) {
+}: PanelProps & { flush: () => Promise<unknown> }) {
   const active = s.provider.active;
   const fields = PROVIDER_FIELDS[active] as FieldDef<typeof active>[] | undefined;
   const [test, setTest] = useState<TestState>({ status: 'idle' });
 
   useEffect(() => setTest({ status: 'idle' }), [active]);
 
-  // 防抖提交时以最新设置为底，避免覆盖期间其他字段的修改
+  // 以存储里的最新设置为底只改这一个字段：连续/并发保存（如填完 Key 立刻点预设）不会互相覆盖
   const setField = (key: string, value: string) => {
-    const configs = latest.current!.provider.configs;
-    void patch({ provider: { configs: { ...configs, [active]: { ...configs[active], [key]: value } } } });
+    void patch(({ provider: { configs } }) => ({
+      provider: { configs: { ...configs, [active]: { ...configs[active], [key]: value } } },
+    }));
   };
 
   const preset = active === 'openai' ? matchPreset(s.provider.configs.openai.baseUrl) : undefined;
   const applyPreset = (id: string) => {
+    // 点当前已选中的预设不重置：否则用户改过的 Base URL / 模型会被预设值覆盖
+    if (id === preset?.id) return;
     const p = OPENAI_PRESETS.find((x) => x.id === id)!;
-    const configs = latest.current!.provider.configs;
-    void patch({ provider: { configs: { ...configs, openai: { ...configs.openai, baseUrl: p.baseUrl, model: p.model } } } });
+    void patch(({ provider: { configs } }) => ({
+      provider: { configs: { ...configs, openai: { ...configs.openai, baseUrl: p.baseUrl, model: p.model } } },
+    }));
     setTest({ status: 'idle' });
   };
 

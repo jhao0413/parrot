@@ -76,16 +76,29 @@ export async function setSettings(settings: Settings): Promise<void> {
 /** 分节局部更新（表单逐字段保存用） */
 export type SettingsPatch = { [K in keyof Settings]?: Partial<Settings[K]> };
 
-export async function updateSettings(patch: SettingsPatch): Promise<Settings> {
-  const current = await getSettings();
-  const next: Record<string, object> = { ...(current as unknown as Record<string, object>) };
-  for (const k of Object.keys(patch)) {
-    const p = (patch as Record<string, object | undefined>)[k];
-    if (p !== undefined) next[k] = { ...next[k], ...p };
-  }
-  const merged = settingsSchema.parse(next);
-  await setSettings(merged);
-  return merged;
+let queue: Promise<unknown> = Promise.resolve();
+
+/**
+ * patch 可传函数：以存储里的最新设置为底计算补丁（嵌套字段如 provider.configs 必须用它，
+ * 否则基于旧快照拼出的整份 configs 会把并发保存的其他字段覆盖掉）。
+ * 同一页面内的更新串行执行，读-改-写不会交错。
+ */
+export function updateSettings(patch: SettingsPatch | ((current: Settings) => SettingsPatch)): Promise<Settings> {
+  const run = async () => {
+    const current = await getSettings();
+    const p = typeof patch === 'function' ? patch(current) : patch;
+    const next: Record<string, object> = { ...(current as unknown as Record<string, object>) };
+    for (const k of Object.keys(p)) {
+      const v = (p as Record<string, object | undefined>)[k];
+      if (v !== undefined) next[k] = { ...next[k], ...v };
+    }
+    const merged = settingsSchema.parse(next);
+    await setSettings(merged);
+    return merged;
+  };
+  const result = queue.then(run, run);
+  queue = result.catch(() => undefined);
+  return result;
 }
 
 /** 订阅设置变更（content script / background / UI 页面通用） */
