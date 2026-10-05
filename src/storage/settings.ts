@@ -53,6 +53,11 @@ export const settingsSchema = z.object({
     /** 鼠标悬停段落时按 Shift 翻译该段 */
     shiftTranslate: z.boolean().prefault(true),
   }).prefault({}),
+  /** YouTube 字幕翻译：打开播放器字幕（CC）时自动生效 */
+  subtitle: z.object({
+    enabled: z.boolean().prefault(true),
+    mode: z.enum(['bilingual', 'translationOnly']).prefault('bilingual'),
+  }).prefault({}),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;

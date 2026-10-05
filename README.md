@@ -7,6 +7,7 @@
 - **划词翻译**：选中文字后在选区旁显示翻译图标，点击弹窗显示译文（样式走 shadow root，与页面隔离），支持单词词典、发音、复制、"译此段"
 - **全文翻译**：双语对照（译文插入原文下方）或仅译文两种模式；懒翻译（进入视口附近才翻译）；`Alt+Shift+T` 快捷键或 popup 开关
 - **悬停段落翻译**：鼠标停在段落内按 `Shift` 即翻译该段（复用全文翻译管线，可在设置页开关）
+- **YouTube 字幕翻译**：打开播放器字幕（CC）即自动生效，播放器控制栏的「译」按钮 / popup / 设置页均可开关，自绘双语字幕层（可选仅译文）；原字幕按句末标点/停顿合并成整句再翻译，自动字幕同样适用；从播放位置起分批预翻译前方约 1 分钟（每批 20 句，倍速时按倍率放大），拖动进度条后从新位置开始；字幕已是目标语言时不介入
 - **翻译工作台**：独立页面，粘贴/输入文本自动翻译（防抖 500ms，长文自动分块）
 - **发音**：有道 TTS（免签名，`dict.youdao.com/dictvoice`），英/美音、中文；在扩展上下文播放（Chrome 用 offscreen document），不受网页 CSP 限制
 
@@ -45,11 +46,13 @@ src/
 ├── tts/player.ts         # 有道 TTS（交给 background 取音频，在 offscreen / background 播放）
 ├── content/
 │   ├── selection/        # 划词弹窗（shadow root + 自带样式）
-│   └── page/             # 全文翻译管线：walker → extractor → lazy → injector → controller
+│   ├── page/             # 全文翻译管线：walker → extractor → lazy → injector → controller
+│   └── youtube/          # 字幕翻译：captions（json3 解析 + 断句）→ subtitles（分批翻译 + 字幕层）；
+│                         #   字幕原文由 entrypoints/youtube-hook（MAIN world）hook XHR/fetch 截获
 └── ui/                   # 共享 React 组件
 ```
 
-v1 刻意不做：SPA 增量翻译（MutationObserver）、虚拟段落切分、防重翻风暴、YouTube 字幕、输入框翻译、配置同步。管线按"可重复执行"设计（off→on 全量重跑），后续可逐步增强。
+v1 刻意不做：SPA 增量翻译（MutationObserver）、虚拟段落切分、防重翻风暴、输入框翻译、配置同步。管线按"可重复执行"设计（off→on 全量重跑），后续可逐步增强。
 
 ## 隐私
 

@@ -101,8 +101,9 @@ export async function translateBatch(
         textToResult.set(uncached[i]!, batchResult[i]!.text);
       }
       uncached.length = 0;
-    } catch {
-      // 批量失败回退逐条
+    } catch (e) {
+      // 被限流时逐条重试只会更糟，直接报错；其他失败（格式/行数不符）回退逐条
+      if (e instanceof ProviderError && e.code === 'RATE_LIMIT') throw e;
     }
   }
 

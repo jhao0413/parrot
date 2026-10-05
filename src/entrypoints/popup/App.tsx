@@ -9,12 +9,14 @@ function App() {
   const [targetLang, setTargetLang] = useState('zh');
   const [activeProvider, setActiveProvider] = useState('microsoft');
   const [mode, setMode] = useState<'bilingual' | 'translationOnly'>('bilingual');
+  const [subtitleOn, setSubtitleOn] = useState(true);
 
   useEffect(() => {
     void getSettings().then((s) => {
       setTargetLang(s.general.targetLang);
       setActiveProvider(s.provider.active);
       setMode(s.page.mode);
+      setSubtitleOn(s.subtitle.enabled);
     });
     void (async () => {
       const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
@@ -45,6 +47,11 @@ function App() {
   const changeMode = async (m: 'bilingual' | 'translationOnly') => {
     setMode(m);
     await updateSettings({ page: { mode: m } });
+  };
+
+  const changeSubtitle = async (on: boolean) => {
+    setSubtitleOn(on);
+    await updateSettings({ subtitle: { enabled: on } });
   };
 
   return (
@@ -94,6 +101,26 @@ function App() {
             className={`px-2 py-1 ${mode === 'translationOnly' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600'}`}
           >
             仅译文
+          </button>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-gray-500">YouTube 字幕翻译</span>
+        <div className="flex overflow-hidden rounded-md border border-gray-200 text-xs">
+          <button
+            type="button"
+            onClick={() => void changeSubtitle(true)}
+            className={`px-2 py-1 ${subtitleOn ? 'bg-blue-600 text-white' : 'bg-white text-gray-600'}`}
+          >
+            开
+          </button>
+          <button
+            type="button"
+            onClick={() => void changeSubtitle(false)}
+            className={`px-2 py-1 ${!subtitleOn ? 'bg-blue-600 text-white' : 'bg-white text-gray-600'}`}
+          >
+            关
           </button>
         </div>
       </div>

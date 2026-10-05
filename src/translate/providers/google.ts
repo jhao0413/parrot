@@ -51,6 +51,27 @@ async function gtxTranslate(
   return { text, detectedFrom: body[2] ? normalizeLang(body[2]) : undefined };
 }
 
+/**
+ * 批量：多条用换行拼成一次请求（gtx 原样保留换行），再按行拆回。
+ * 字幕一批几十句，逐条请求很快会被 Google 限流（302 跳验证页 / 429）。
+ * 行数对不上（个别文本被合并/拆行）就抛错，由 service 回退逐条翻译。
+ */
+async function gtxTranslateBatch(
+  reqs: TranslateRequest[],
+  cfg: ProviderCfg,
+  signal?: AbortSignal,
+): Promise<TranslateResponse[]> {
+  const first = reqs[0];
+  if (!first) return [];
+  if (reqs.some((r) => r.text.includes('\n') || r.from !== first.from || r.to !== first.to)) {
+    throw new ProviderError('PROVIDER_ERROR', '批量请求含换行或语言不一致');
+  }
+  const res = await gtxTranslate({ ...first, text: reqs.map((r) => r.text).join('\n') }, cfg, signal);
+  const lines = res.text.split('\n');
+  if (lines.length !== reqs.length) throw new ProviderError('PROVIDER_ERROR', '批量结果行数不匹配');
+  return lines.map((text) => ({ text: text.trim(), detectedFrom: res.detectedFrom }));
+}
+
 /** dt=bd 每项：[词性名, 译法列表, ...]；dt=md 每项：[词性名, [[释义, id, 例句?], ...], ...] */
 type GtxDictBody = [
   (string | null)[][] | null, // [0] 片段；末项 [null, null, 原文拼音, 原文音标]
@@ -97,5 +118,6 @@ export const googleProvider: TranslateProvider = {
   name: 'Google 翻译（免费）',
   requiresKey: false,
   translate: gtxTranslate,
+  translateBatch: gtxTranslateBatch,
   dictLookup: gtxDictLookup,
 };

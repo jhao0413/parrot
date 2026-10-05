@@ -96,6 +96,48 @@ export default function App() {
       </section>
 
       <section className="space-y-3 rounded-xl bg-white p-5 shadow-sm">
+        <h2 className="text-sm font-medium text-gray-700">YouTube 字幕</h2>
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-gray-500">打开字幕（CC）时自动翻译</span>
+          <div className="flex overflow-hidden rounded-md border border-gray-200 text-xs">
+            <button
+              type="button"
+              className={`px-2 py-1 ${settings.subtitle.enabled ? 'bg-blue-600 text-white' : 'bg-white text-gray-600'}`}
+              onClick={() => void patch({ subtitle: { enabled: true } })}
+            >
+              开
+            </button>
+            <button
+              type="button"
+              className={`px-2 py-1 ${!settings.subtitle.enabled ? 'bg-blue-600 text-white' : 'bg-white text-gray-600'}`}
+              onClick={() => void patch({ subtitle: { enabled: false } })}
+            >
+              关
+            </button>
+          </div>
+        </div>
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-gray-500">字幕显示</span>
+          <div className="flex overflow-hidden rounded-md border border-gray-200 text-xs">
+            <button
+              type="button"
+              className={`px-2 py-1 ${settings.subtitle.mode === 'bilingual' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600'}`}
+              onClick={() => void patch({ subtitle: { mode: 'bilingual' } })}
+            >
+              双语
+            </button>
+            <button
+              type="button"
+              className={`px-2 py-1 ${settings.subtitle.mode === 'translationOnly' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600'}`}
+              onClick={() => void patch({ subtitle: { mode: 'translationOnly' } })}
+            >
+              仅译文
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-3 rounded-xl bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-medium text-gray-700">翻译服务</h2>
           <button type="button" onClick={() => void testProvider()} className="rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">
