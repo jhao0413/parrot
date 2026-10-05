@@ -15,6 +15,9 @@ const MAX_INFLIGHT = 2;
 const LOOKAHEAD_MS = 60_000;
 const MAX_LOOKAHEAD_RATE = 4;
 const RETRY_AFTER_MS = 15_000;
+/** 被翻译服务限流后整体暂停：5 分钟起，连续限流翻倍，最长 30 分钟（限流按 IP 算，继续重试只会拖长封禁，还连累其他翻译插件） */
+const RATE_LIMIT_PAUSE_MS = 5 * 60_000;
+const RATE_LIMIT_PAUSE_MAX_MS = 30 * 60_000;
 const MAX_TRACKS = 5;
 
 interface TrackState extends CaptionTrack {
@@ -72,6 +75,8 @@ class YoutubeSubtitles {
   private inflight = 0;
   private generation = 0; // 目标语言变更后丢弃在途结果
   private lastError = '';
+  private pauseUntil = 0;
+  private pauseMs = 0;
   private overlay: HTMLDivElement | null = null;
   private button: HTMLButtonElement | null = null;
   private iconMeasured = false;
@@ -83,6 +88,8 @@ class YoutubeSubtitles {
     void getSettings().then((s) => (this.settings = s));
     watchSettings((s) => {
       if (this.settings && s.general.targetLang !== this.settings.general.targetLang) this.resetTranslations();
+      // 换了翻译服务：限流暂停只针对原服务，立即恢复，之前失败的句子也马上重试
+      if (this.settings && s.provider.active !== this.settings.provider.active) this.clearFailures();
       this.settings = s;
       this.rendered = '';
     });
@@ -125,6 +132,13 @@ class YoutubeSubtitles {
     }
   }
 
+  private clearFailures(): void {
+    this.pauseUntil = 0;
+    this.pauseMs = 0;
+    this.lastError = '';
+    for (const t of this.tracks.values()) t.failedAt.clear();
+  }
+
   private render(): void {
     const s = this.settings;
     const videoId = currentVideoId();
@@ -153,7 +167,8 @@ class YoutubeSubtitles {
 
     const idx = findCue(track.cues, t);
     const trans = idx >= 0 ? track.trans[idx] : undefined;
-    const failed = idx >= 0 && track.failedAt.has(idx);
+    // 限流暂停期间还没轮到请求的句子也提示原因，否则只见原文不知为何
+    const failed = idx >= 0 && (track.failedAt.has(idx) || Date.now() < this.pauseUntil);
     const key = `${videoId}|${idx}|${trans ?? ''}|${failed}|${s.subtitle.mode}`;
     if (key === this.rendered) return;
     this.rendered = key;
@@ -229,8 +244,8 @@ class YoutubeSubtitles {
 
   /** 挑一批未翻译的句子发批量请求 */
   private pump(track: TrackState, t: number, rate: number, to: string): void {
-    if (this.inflight >= MAX_INFLIGHT) return;
     const now = Date.now();
+    if (this.inflight >= MAX_INFLIGHT || now < this.pauseUntil) return;
     const picked: number[] = [];
     // 从播放位置往后挑（seek 后自然从新位置开始）；紧接着的那句即使在窗口外也翻，长静音后不至于空等
     const horizon = t + LOOKAHEAD_MS * Math.min(Math.max(rate, 1), MAX_LOOKAHEAD_RATE);
@@ -253,7 +268,10 @@ class YoutubeSubtitles {
       from: 'auto',
       to,
     })
-      .catch((e: unknown) => ({ ok: false as const, error: { message: e instanceof Error ? e.message : String(e) } }))
+      .catch((e: unknown) => ({
+        ok: false as const,
+        error: { code: 'INTERNAL' as const, message: e instanceof Error ? e.message : String(e) },
+      }))
       .then((res) => {
         this.inflight--; // 过期请求也要释放名额，并发上限才准
         if (gen !== this.generation) return;
@@ -262,7 +280,13 @@ class YoutubeSubtitles {
         if (!res.ok) {
           this.lastError = `字幕翻译失败：${res.error.message}`;
           picked.forEach((i) => track.failedAt.set(i, failedAt));
+          if (res.error.code === 'RATE_LIMIT') {
+            this.pauseMs = Math.min(Math.max(this.pauseMs * 2, RATE_LIMIT_PAUSE_MS), RATE_LIMIT_PAUSE_MAX_MS);
+            this.pauseUntil = failedAt + this.pauseMs;
+            this.lastError = `翻译服务限流，${this.pauseMs / 60_000} 分钟后自动重试（可在设置中换一个翻译服务）`;
+          }
         } else {
+          this.pauseMs = 0;
           for (const r of res.data.results) {
             track.trans[Number(r.id)] = r.text;
             track.failedAt.delete(Number(r.id));
