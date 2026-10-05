@@ -3,36 +3,13 @@ import { normalizeLang } from '../lang';
 
 /**
  * 微软翻译免费网页接口（Edge 浏览器内置翻译同款）：
- * 1. GET https://edge.microsoft.com/translate/auth 拿匿名 JWT（约 10 分钟有效）
- * 2. POST https://api.cognitive.microsofttranslator.com/translate?to=<lang>&api-version=3.0
- *    Authorization: Bearer <jwt>，body 为 [{ Text }]
- * 无需 key。非官方端点，全部隔离在本文件内，失效时只改这里。
+ * POST https://edge.microsoft.com/translate/translatetext?from=&to=<lang>&isEnterpriseClient=false
+ * body 为字符串数组，响应与 Azure Translator v3 相同；无需 key，也不用 token。
+ * （旧的 edge.microsoft.com/translate/auth 取 token 流程已于 2026 年下线，返回 404）
+ * 非官方端点，全部隔离在本文件内，失效时只改这里。
  */
 
-const AUTH_URL = 'https://edge.microsoft.com/translate/auth';
-const TRANSLATE_URL = 'https://api.cognitive.microsofttranslator.com/translate';
-
-let cachedToken: { token: string; expiresAt: number } | null = null;
-
-async function getToken(): Promise<string> {
-  if (cachedToken && cachedToken.expiresAt > Date.now() + 60_000) {
-    return cachedToken.token;
-  }
-  const res = await fetch(AUTH_URL);
-  if (!res.ok) {
-    throw new ProviderError('NETWORK', `获取微软翻译 token 失败: HTTP ${res.status}`);
-  }
-  const token = await res.text();
-  // JWT payload 里的 exp（秒）
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]!.replace(/-/g, '+').replace(/_/g, '/')));
-    cachedToken = { token, expiresAt: payload.exp * 1000 };
-  } catch {
-    // 解析失败就按 5 分钟算
-    cachedToken = { token, expiresAt: Date.now() + 5 * 60_000 };
-  }
-  return token;
-}
+const TRANSLATE_URL = 'https://edge.microsoft.com/translate/translatetext';
 
 function mapLang(code: string): string {
   const normalized = normalizeLang(code);
@@ -44,30 +21,20 @@ function mapLang(code: string): string {
 interface MsResponse {
   detectedLanguage?: { language: string };
   translations: { to: string; text: string }[];
-  errorMessage?: string;
 }
 
-async function msTranslate(
-  req: TranslateRequest,
-  _cfg: ProviderCfg,
-  signal?: AbortSignal,
-): Promise<TranslateResponse> {
-  const token = await getToken();
-  const params = new URLSearchParams({ 'api-version': '3.0', to: mapLang(req.to) });
-  if (req.from !== 'auto') params.set('from', mapLang(req.from));
+async function msRequest(texts: string[], from: string, to: string, signal?: AbortSignal): Promise<TranslateResponse[]> {
+  const params = new URLSearchParams({
+    from: from === 'auto' ? '' : mapLang(from),
+    to: mapLang(to),
+    isEnterpriseClient: 'false',
+  });
   const res = await fetch(`${TRANSLATE_URL}?${params}`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify([{ Text: req.text }]),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(texts),
     signal,
   });
-  if (res.status === 401 || res.status === 403) {
-    cachedToken = null; // token 失效，下次重取
-    throw new ProviderError('PROVIDER_ERROR', '微软翻译 token 失效，请重试');
-  }
   if (res.status === 429) {
     throw new ProviderError('RATE_LIMIT', '微软翻译请求过于频繁');
   }
@@ -75,19 +42,42 @@ async function msTranslate(
     throw new ProviderError('NETWORK', `微软翻译请求失败: HTTP ${res.status}`);
   }
   const body = (await res.json()) as MsResponse[];
-  const first = body[0];
-  if (!first || first.errorMessage) {
-    throw new ProviderError('PROVIDER_ERROR', first?.errorMessage ?? '微软翻译返回为空');
+  if (!Array.isArray(body) || body.length !== texts.length) {
+    throw new ProviderError('PROVIDER_ERROR', '微软翻译返回格式异常');
   }
-  return {
-    text: first.translations[0]!.text,
-    detectedFrom: first.detectedLanguage?.language,
-  };
+  return body.map((r) => {
+    const text = r.translations?.[0]?.text;
+    if (text === undefined) throw new ProviderError('PROVIDER_ERROR', '微软翻译返回为空');
+    return { text, detectedFrom: r.detectedLanguage?.language };
+  });
 }
+
+/** 单次请求的条数 / 字符上限（同 Azure v3：100 条、5 万字符，留余量） */
+const MAX_ITEMS = 50;
+const MAX_CHARS = 20_000;
 
 export const microsoftProvider: TranslateProvider = {
   id: 'microsoft',
   name: '微软翻译（免费）',
   requiresKey: false,
-  translate: msTranslate,
+  async translate(req: TranslateRequest, _cfg: ProviderCfg, signal?: AbortSignal) {
+    return (await msRequest([req.text], req.from, req.to, signal))[0]!;
+  },
+  async translateBatch(reqs: TranslateRequest[], _cfg: ProviderCfg, signal?: AbortSignal) {
+    // 批量场景 reqs 共享同一 from/to（service 层保证）
+    const out: TranslateResponse[] = [];
+    let start = 0;
+    while (start < reqs.length) {
+      let end = start;
+      let chars = 0;
+      while (end < reqs.length && end - start < MAX_ITEMS && (end === start || chars + reqs[end]!.text.length <= MAX_CHARS)) {
+        chars += reqs[end]!.text.length;
+        end++;
+      }
+      const chunk = reqs.slice(start, end);
+      out.push(...(await msRequest(chunk.map((r) => r.text), reqs[0]!.from, reqs[0]!.to, signal)));
+      start = end;
+    }
+    return out;
+  },
 };
