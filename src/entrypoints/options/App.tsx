@@ -177,7 +177,7 @@ export default function App() {
         {/* 侧栏：窄屏时变成顶部横向导航 */}
         <aside className="sticky top-0 z-10 border-b border-zinc-200/70 bg-zinc-50/90 px-4 pt-4 backdrop-blur md:static md:w-52 md:shrink-0 md:border-0 md:bg-transparent md:p-0 dark:border-white/5 dark:bg-zinc-950/90 md:dark:bg-transparent">
           <div className="flex items-center gap-2.5 px-2 md:mb-8">
-            <img src="/icon/48.png" alt="" className="size-7 rounded-lg" />
+            <img src="/logo.png" alt="" className="size-7" />
             <div className="leading-tight">
               <div className="text-sm font-semibold tracking-tight">Parrot 翻译</div>
               <div className="text-xs text-zinc-500 dark:text-zinc-400">设置</div>
@@ -205,7 +205,7 @@ export default function App() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     aria-hidden
-                    className={`size-[18px] ${active ? 'text-blue-600 dark:text-blue-400' : ''}`}
+                    className={`size-[18px] ${active ? 'text-brand-700 dark:text-brand-400' : ''}`}
                   >
                     {p.icon}
                   </svg>
@@ -423,16 +423,16 @@ function ProviderPanel({
                 role="radio"
                 aria-checked={selected}
                 onClick={() => void patch({ provider: { active: p.id } })}
-                className={`group flex items-start gap-3 rounded-xl bg-white px-4 py-3.5 text-start transition-[box-shadow] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:bg-zinc-900 ${
+                className={`group flex items-start gap-3 rounded-xl bg-white px-4 py-3.5 text-start transition-[box-shadow] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 dark:bg-zinc-900 ${
                   selected
-                    ? 'shadow-[0_0_0_1.5px_rgb(37_99_235),0_1px_2px_rgb(0_0_0/0.04)] dark:shadow-[0_0_0_1.5px_rgb(96_165_250)]'
+                    ? 'shadow-[0_0_0_1.5px_rgb(22_163_74),0_1px_2px_rgb(0_0_0/0.04)] dark:shadow-[0_0_0_1.5px_rgb(74_222_128)]'
                     : 'shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_1px_2px_rgb(0_0_0/0.04)] hover:shadow-[0_0_0_1px_rgb(0_0_0/0.14),0_2px_6px_-2px_rgb(0_0_0/0.08)] dark:shadow-[0_0_0_1px_rgb(255_255_255/0.07)] dark:hover:shadow-[0_0_0_1px_rgb(255_255_255/0.16)]'
                 }`}
               >
                 <span
                   aria-hidden
                   className={`mt-0.5 grid size-4 shrink-0 place-items-center rounded-full transition-colors duration-150 ${
-                    selected ? 'bg-blue-600 dark:bg-blue-500' : 'shadow-[inset_0_0_0_1.5px_rgb(161_161_170)]'
+                    selected ? 'bg-brand-600 dark:bg-brand-500' : 'shadow-[inset_0_0_0_1.5px_rgb(161_161_170)]'
                   }`}
                 >
                   {selected && <span className="size-1.5 rounded-full bg-white" />}
@@ -443,7 +443,7 @@ function ProviderPanel({
                     <span
                       className={`rounded-full px-1.5 py-px text-[11px] font-medium ${
                         meta.free
-                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
+                          ? 'bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-400'
                           : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'
                       }`}
                     >
@@ -478,7 +478,7 @@ function ProviderPanel({
                 label={f.label}
                 hint={
                   active === 'openai' && f.key === 'apiKey' && preset ? (
-                    <a href={preset.keyUrl} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline dark:text-blue-400">
+                    <a href={preset.keyUrl} target="_blank" rel="noreferrer" className="text-brand-700 hover:underline dark:text-brand-400">
                       获取 {preset.name} API Key ↗
                     </a>
                   ) : (
@@ -507,7 +507,7 @@ function ProviderPanel({
           </button>
           <p aria-live="polite" className="min-w-0 flex-1 text-[13px]">
             {test.status === 'ok' && (
-              <span className="text-emerald-700 dark:text-emerald-400">
+              <span className="text-brand-700 dark:text-brand-400">
                 连接正常 · <span className="text-zinc-600 dark:text-zinc-300">Hello, world. → {test.message}</span>
               </span>
             )}
@@ -532,7 +532,7 @@ function AboutPanel() {
           <a
             href="/workbench.html"
             target="_blank"
-            className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-blue-600 shadow-[0_0_0_1px_rgb(0_0_0/0.1)] hover:bg-zinc-50 dark:text-blue-400 dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)] dark:hover:bg-white/5"
+            className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-brand-700 shadow-[0_0_0_1px_rgb(0_0_0/0.1)] hover:bg-zinc-50 dark:text-brand-400 dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)] dark:hover:bg-white/5"
           >
             打开
           </a>

@@ -1,5 +1,6 @@
 import { createRoot, type Root } from 'react-dom/client';
 import { isContextValid } from '@/messaging/protocol';
+import { LogoMark } from '@/ui/LogoMark';
 import { SelectionPopup } from './SelectionPopup';
 import { popupStyles } from './styles';
 
@@ -70,18 +71,12 @@ function showTrigger(text: string, rect: DOMRect): void {
     <button
       type="button"
       className="pr-trigger"
-      title="翻译"
+      title="翻译（Parrot）"
+      aria-label="翻译选中文字"
       onMouseDown={(e) => e.preventDefault()} // 不清掉页面选区
       onClick={() => showPopup(text, rect)}
     >
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="m5 8 6 6" />
-        <path d="m4 14 6-6 2-3" />
-        <path d="M2 5h12" />
-        <path d="M7 2h1" />
-        <path d="m22 22-5-10-5 10" />
-        <path d="M14 18h6" />
-      </svg>
+      <LogoMark size={26} />
     </button>,
   );
 }

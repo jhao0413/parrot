@@ -1,4 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { selectBaseClass } from '@/ui/styles';
+
+export { Segmented, Toggle } from '@/ui/controls';
 
 /** 设置页基础组件：分组卡片 / 设置行 / 开关 / 分段选择 / 文本输入 / 下拉 */
 
@@ -43,70 +46,10 @@ export function Row({
   );
 }
 
-export function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-10 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 ${
-        checked ? 'bg-blue-600' : 'bg-zinc-200 dark:bg-zinc-700'
-      }`}
-    >
-      <span
-        aria-hidden
-        className={`ml-0.5 size-5 rounded-full bg-white shadow-[0_1px_2px_rgb(0_0_0/0.2)] transition-[translate] duration-150 ease-out ${
-          checked ? 'translate-x-4' : 'translate-x-0'
-        }`}
-      />
-    </button>
-  );
-}
-
-/** 分段选择（2~3 个互斥选项） */
-export function Segmented<T extends string | number>({
-  value,
-  options,
-  onChange,
-  label,
-}: {
-  value: T;
-  options: readonly { value: T; label: string }[];
-  onChange: (v: T) => void;
-  label: string;
-}) {
-  return (
-    <div role="radiogroup" aria-label={label} className="inline-flex rounded-[10px] bg-zinc-100 p-0.5 dark:bg-zinc-800">
-      {options.map((o) => {
-        const active = o.value === value;
-        return (
-          <button
-            key={String(o.value)}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            onClick={() => onChange(o.value)}
-            className={`min-w-16 rounded-lg px-3 py-1.5 text-[13px] font-medium transition-[color,background-color,box-shadow] duration-150 focus-visible:outline-2 focus-visible:outline-blue-500 ${
-              active
-                ? 'bg-white text-zinc-900 shadow-[0_0_0_1px_rgb(0_0_0/0.04),0_1px_2px_rgb(0_0_0/0.08)] dark:bg-zinc-600 dark:text-white'
-                : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'
-            }`}
-          >
-            {o.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-export const selectClass =
-  'w-44 cursor-pointer appearance-none rounded-lg bg-white bg-[url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2016%2016%27%20fill%3D%27none%27%20stroke%3D%27%2371717a%27%20stroke-width%3D%271.5%27%3E%3Cpath%20d%3D%27M4%206l4%204%204-4%27/%3E%3C/svg%3E")] bg-[length:16px] bg-[right_8px_center] bg-no-repeat py-1.5 ps-3 pe-8 text-sm text-zinc-900 shadow-[0_0_0_1px_rgb(0_0_0/0.1),0_1px_2px_rgb(0_0_0/0.04)] focus-visible:outline-2 focus-visible:outline-blue-500 dark:bg-zinc-800 dark:text-zinc-100 dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]';
+export const selectClass = `w-44 ${selectBaseClass}`;
 
 const inputClass =
-  'w-full rounded-lg bg-white px-3 py-2 text-sm text-zinc-900 shadow-[0_0_0_1px_rgb(0_0_0/0.1),0_1px_2px_rgb(0_0_0/0.04)] placeholder:text-zinc-400 focus-visible:shadow-[0_0_0_2px_rgb(59_130_246)] focus-visible:outline-none dark:bg-zinc-800 dark:text-zinc-100 dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]';
+  'w-full rounded-lg bg-white px-3 py-2 text-sm text-zinc-900 shadow-[0_0_0_1px_rgb(0_0_0/0.1),0_1px_2px_rgb(0_0_0/0.04)] placeholder:text-zinc-400 focus-visible:shadow-[0_0_0_2px_rgb(22_163_74)] focus-visible:outline-none dark:bg-zinc-800 dark:text-zinc-100 dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]';
 
 /**
  * 文本输入：本地状态即时响应，停止输入 400ms 或失焦时才提交

@@ -1,0 +1,3 @@
+/** 下拉框基础样式（options / workbench 共用），宽度由调用方决定 */
+export const selectBaseClass =
+  'cursor-pointer appearance-none rounded-lg bg-white bg-[url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2016%2016%27%20fill%3D%27none%27%20stroke%3D%27%2371717a%27%20stroke-width%3D%271.5%27%3E%3Cpath%20d%3D%27M4%206l4%204%204-4%27/%3E%3C/svg%3E")] bg-[length:16px] bg-[right_8px_center] bg-no-repeat py-1.5 ps-3 pe-8 text-sm text-zinc-900 shadow-[0_0_0_1px_rgb(0_0_0/0.1),0_1px_2px_rgb(0_0_0/0.04)] focus-visible:outline-2 focus-visible:outline-brand-600 dark:bg-zinc-800 dark:text-zinc-100 dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]';

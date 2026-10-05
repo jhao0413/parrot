@@ -42,7 +42,7 @@ export function SpeakerButton({
       type="button"
       title={title}
       disabled={!text.trim() || busy}
-      className={`inline-flex ${box} items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent`}
+      className={`inline-flex ${box} items-center justify-center rounded-full text-zinc-500 transition-colors duration-150 hover:bg-zinc-100 hover:text-zinc-800 focus-visible:outline-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-zinc-100`}
       onClick={async (e) => {
         e.stopPropagation();
         if (busy) return;
@@ -56,7 +56,7 @@ export function SpeakerButton({
         }
       }}
     >
-      <VolumeIcon className={`${icon} ${busy ? 'animate-pulse text-blue-500' : ''}`} />
+      <VolumeIcon className={`${icon} ${busy ? 'animate-pulse text-brand-600 dark:text-brand-400' : ''}`} />
     </button>
   );
 }

@@ -1,4 +1,9 @@
 @import 'tailwindcss';
+@import '../../ui/theme.css';
+
+:root {
+  color-scheme: light dark;
+}
 
 body {
   width: 320px;

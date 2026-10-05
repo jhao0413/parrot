@@ -1,0 +1,15 @@
+/* 品牌色：与 logo 底色一致（鹦鹉绿 = Tailwind green）。
+   小字/链接用 700（浅色）/ 400（深色）保证对比度，600 只用于色块、描边等非文字元素 */
+@theme inline {
+  --color-brand-50: var(--color-green-50);
+  --color-brand-100: var(--color-green-100);
+  --color-brand-200: var(--color-green-200);
+  --color-brand-300: var(--color-green-300);
+  --color-brand-400: var(--color-green-400);
+  --color-brand-500: var(--color-green-500);
+  --color-brand-600: var(--color-green-600);
+  --color-brand-700: var(--color-green-700);
+  --color-brand-800: var(--color-green-800);
+  --color-brand-900: var(--color-green-900);
+  --color-brand-950: var(--color-green-950);
+}

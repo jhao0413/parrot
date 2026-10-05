@@ -1,4 +1,4 @@
-# 🦜 Parrot 翻译
+<h1><img src="public/logo.png" width="40" height="40" alt="" align="top"> Parrot 翻译</h1>
 
 一个刻意保持简单的浏览器翻译扩展（Chrome / Edge，Manifest V3）。灵感来自 [read-frog](https://github.com/mengxi-ream/read-frog)，但砍掉了 80% 的复杂度，只保留核心翻译能力，架构干净、可逐步增强。
 

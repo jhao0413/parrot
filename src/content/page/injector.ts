@@ -19,7 +19,7 @@ const STYLE_CSS = `
   line-height: 1.6;
 }
 [data-mt-trans]:not(.parrot-loading) {
-  text-decoration: underline dashed #3b82f6;
+  text-decoration: underline dashed #16a34a;
   text-decoration-thickness: 1.5px;
   text-underline-offset: 0.25em;
 }
@@ -30,14 +30,14 @@ const STYLE_CSS = `
   margin: 0 0 0 0.4em;
   vertical-align: -0.1em;
 }
-/* 渐变拖尾的圆环：conic-gradient 由透明到蓝色，mask 挖空中心只留环 */
+/* 渐变拖尾的圆环：conic-gradient 由透明到品牌绿，mask 挖空中心只留环 */
 [data-mt-trans].parrot-loading::before {
   content: '';
   display: block;
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: conic-gradient(transparent 10%, #3b82f6);
+  background: conic-gradient(transparent 10%, #16a34a);
   -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 0.15em), #000 calc(100% - 0.14em));
   mask: radial-gradient(farthest-side, transparent calc(100% - 0.15em), #000 calc(100% - 0.14em));
   animation: parrot-spin 0.8s linear infinite;
