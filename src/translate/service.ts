@@ -78,6 +78,7 @@ export async function translateBatch(
   const textToResult = new Map<string, string>();
   const failedIds: string[] = [];
   const results: TranslateItemResult[] = [];
+  let lastError: unknown;
 
   // 先走缓存
   const uncached: string[] = [];
@@ -106,7 +107,9 @@ export async function translateBatch(
       uncached.length = 0;
     } catch (e) {
       // 被限流时逐条重试只会更糟，直接报错；其他失败（格式/行数不符）回退逐条
-      if (e instanceof ProviderError && e.code === 'RATE_LIMIT') throw e;
+      // Key 无效 / 网络不通同理，逐条也必然失败
+      if (e instanceof ProviderError && (e.code === 'RATE_LIMIT' || e.code === 'NO_KEY' || e.code === 'NETWORK')) throw e;
+      lastError = e;
     }
   }
 
@@ -114,8 +117,9 @@ export async function translateBatch(
     uncached.map(async (text) => {
       try {
         textToResult.set(text, await translateOneCached(provider.id, cfg, provider, text, from, to));
-      } catch {
+      } catch (e) {
         // 单条失败：对应 id 进 failedIds
+        lastError = e;
       }
     }),
   );
@@ -128,6 +132,8 @@ export async function translateBatch(
       results.push({ id: item.id, text });
     }
   }
+  // 全军覆没时抛出真实原因（如 HTTP 400 模型名错误），否则调用方只能显示笼统的"翻译失败"
+  if (results.length === 0 && failedIds.length > 0 && lastError) throw lastError;
   return { results, failedIds };
 }
 

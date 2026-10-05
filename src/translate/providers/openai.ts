@@ -81,13 +81,25 @@ async function chat(cfg: ProviderCfg, messages: { role: string; content: string 
   return stripReasoning(content);
 }
 
-function parseNumbered(output: string, count: number): string[] | null {
-  const lines = output.split('\n').filter((l) => l.trim().length > 0);
+/**
+ * 单条译文：只去掉开头的 "1|" 编号，保留全部内容。
+ * 不能走 parseNumbered：多段原文的译文含多行，逐行解析会把第一行之后的内容丢掉。
+ */
+export function stripSingleNumber(output: string): string {
+  return output.trim().replace(/^(?:```\w*\n)?\s*(?:\*\*)?1(?:\*\*)?\s*[|｜]\s?/, '').replace(/\n?```$/, '').trim();
+}
+
+/**
+ * 解析编号行输出。对模型的小毛病宽容：代码块围栏、开头/结尾的说明文字、
+ * `1.` / `1:` / `1)` / `1、` / 全角 `｜` 等分隔符都接受；同号重复取第一条。缺号才算失败。
+ */
+export function parseNumbered(output: string, count: number): string[] | null {
   const map = new Map<number, string>();
-  for (const line of lines) {
-    const m = line.match(/^\s*(\d+)\s*\|\s?(.*)$/);
-    if (!m) return null;
-    map.set(Number(m[1]), m[2] ?? '');
+  for (const line of output.split('\n')) {
+    const m = line.match(/^\s*(?:\*\*)?(\d+)(?:\*\*)?\s*[|｜.:：)、]\s?(.*)$/);
+    if (!m) continue;
+    const n = Number(m[1]);
+    if (n >= 1 && n <= count && !map.has(n)) map.set(n, m[2] ?? '');
   }
   const result: string[] = [];
   for (let i = 1; i <= count; i++) {
@@ -107,8 +119,7 @@ async function openaiTranslate(req: TranslateRequest, cfg: ProviderCfg, signal?:
     ],
     signal,
   );
-  const parsed = parseNumbered(content, 1);
-  return { text: parsed?.[0] ?? content.trim() };
+  return { text: stripSingleNumber(content) };
 }
 
 async function openaiTranslateBatch(reqs: TranslateRequest[], cfg: ProviderCfg, signal?: AbortSignal): Promise<TranslateResponse[]> {
@@ -123,7 +134,7 @@ async function openaiTranslateBatch(reqs: TranslateRequest[], cfg: ProviderCfg, 
     signal,
   );
   const parsed = parseNumbered(content, reqs.length);
-  if (!parsed) throw new ProviderError('PROVIDER_ERROR', 'LLM 批量输出格式不匹配');
+  if (!parsed) throw new ProviderError('PROVIDER_ERROR', `LLM 批量输出格式不匹配: ${content.slice(0, 120)}`);
   return parsed.map((text) => ({ text: text.replace(/\\n/g, '\n') }));
 }
 
