@@ -5,14 +5,17 @@ export function LangSelect({
   onChange,
   includeAuto,
   className,
+  id,
 }: {
   value: string;
   onChange: (v: string) => void;
   includeAuto?: boolean;
   className?: string;
+  id?: string;
 }) {
   return (
     <select
+      id={id}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       className={

@@ -1,7 +1,12 @@
 @import 'tailwindcss';
 
+:root {
+  color-scheme: light dark;
+  /* 切到内容较长的分类时出现滚动条，预留位置避免整页左右跳动 */
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: #f5f6f8;
 }
