@@ -1,5 +1,5 @@
 import { ProviderError, type ProviderCfg, type TranslateProvider, type TranslateRequest, type TranslateResponse } from '../provider';
-import { normalizeLang } from '../lang';
+import { isChineseWord, normalizeLang } from '../lang';
 import type { DictEntry } from '@/messaging/protocol';
 
 /**
@@ -92,13 +92,15 @@ export const youdaoProvider: TranslateProvider = {
     return { text, detectedFrom: detected ? normalizeLang(detected) : undefined };
   },
   async dictLookup(word: string, cfg: ProviderCfg): Promise<DictEntry | null> {
-    // 中文释义目标：源为英文时译中文
-    const body = await call({ text: word, from: 'auto', to: 'zh' }, cfg);
+    // 英文词查中文释义，中文词查英文释义
+    const zh = isChineseWord(word);
+    const body = await call({ text: word, from: 'auto', to: zh ? 'en' : 'zh' }, cfg);
     const basic = body.basic;
     if (!basic || (!basic.explains?.length && !body.translation?.length)) return null;
     return {
       word,
-      phonetic: basic.phonetic ? `/${basic.phonetic}/` : undefined,
+      lang: zh ? 'zh' : 'en',
+      phonetic: basic.phonetic ? (zh ? basic.phonetic : `/${basic.phonetic}/`) : undefined,
       explanations: basic.explains?.slice(0, 8) ?? body.translation?.slice(0, 3) ?? [],
     };
   },

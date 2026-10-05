@@ -1,6 +1,7 @@
 import type { BatchTranslateData, DictEntry, SingleTranslateResult, TranslateItemResult } from '@/messaging/protocol';
 import { getSettings, type Settings } from '@/storage/settings';
 import { cacheGet, cacheKey, cacheSet } from './cache';
+import { isChineseWord, normalizeLang } from './lang';
 import { ProviderError, getProvider } from './provider';
 
 /** 简单并发限制器（每 provider 同时最多 N 个请求在飞） */
@@ -148,7 +149,9 @@ export async function translateSingle(
   const { provider, cfg } = await resolveProvider(settings);
 
   const trimmed = text.trim();
-  const isWord = /^[a-zA-Z][\w'-]*( [\w'-]+){0,3}$/.test(trimmed);
+  // 英文单词/短语查英汉；中文词语查汉英（目标是中文时查中文词没意义）
+  const isWord =
+    /^[a-zA-Z][\w'-]*( [\w'-]+){0,3}$/.test(trimmed) || (isChineseWord(trimmed) && !normalizeLang(to).startsWith('zh'));
   // 词典与翻译并行请求；词典失败不阻塞翻译
   const dictPromise: Promise<DictEntry | undefined> =
     wantDict && isWord && provider.dictLookup

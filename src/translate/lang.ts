@@ -21,6 +21,11 @@ export function isChineseText(text: string): boolean {
   return cjk > 0 && cjk / Math.max(text.replace(/\s/g, '').length, 1) > 0.3;
 }
 
+/** 单个中文词语（1–8 个汉字，不含标点/空格），用于中→英查词 */
+export function isChineseWord(text: string): boolean {
+  return /^[\u4e00-\u9fff\u3400-\u4dbf]{1,8}$/.test(text);
+}
+
 /** 文本里是否基本没有目标语言的字符（粗略，用于过滤数字/符号等噪声段落） */
 export function hasLetters(text: string): boolean {
   return /[a-zA-Z぀-ヿ가-힯Ѐ-ӿ֐-׿؀-ۿ一-鿿]/.test(text);

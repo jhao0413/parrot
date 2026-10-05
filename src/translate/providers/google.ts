@@ -1,6 +1,6 @@
 import type { DictEntry } from '@/messaging/protocol';
 import { ProviderError, type ProviderCfg, type TranslateProvider, type TranslateRequest, type TranslateResponse } from '../provider';
-import { normalizeLang } from '../lang';
+import { isChineseWord, normalizeLang } from '../lang';
 
 /**
  * Google 翻译免费网页接口（client=gtx）：
@@ -104,9 +104,11 @@ async function gtxDictLookup(word: string, _cfg: ProviderCfg, to: string): Promi
   if (!parts.length && !definitions.length) return null;
 
   const phonetic = body[0]?.find((seg) => typeof seg?.[3] === 'string')?.[3] as string | undefined;
+  const zh = isChineseWord(word); // 中文词的音标位是拼音，不加 /…/
   return {
     word,
-    phonetic: phonetic ? `/${phonetic}/` : undefined,
+    lang: zh ? 'zh' : 'en',
+    phonetic: phonetic ? (zh ? phonetic : `/${phonetic}/`) : undefined,
     explanations: parts.map((p) => `${p.pos} ${p.means}`),
     parts,
     definitions,

@@ -8,6 +8,7 @@ const divider = 'border-t border-zinc-200/70 pt-3 dark:border-white/5';
 /** 词典区：有道词典给出富字段（分美/英音标、考试标签、词性、词形、词组），其他 provider 只有简单释义 */
 function DictSection({ dict }: { dict: DictEntry }) {
   const phonetics = dict.phonetics ?? [];
+  const lang = dict.lang ?? 'en';
   return (
     // 行首全角括号去掉左侧空白，换行后才能与上一行对齐
     <div className="space-y-3 rounded-xl bg-zinc-100/70 px-4 py-3.5 text-[13px] leading-6 text-zinc-700 [text-spacing-trim:trim-start] dark:bg-white/5 dark:text-zinc-300">
@@ -32,7 +33,7 @@ function DictSection({ dict }: { dict: DictEntry }) {
           ) : (
             <span className="inline-flex items-center gap-1 text-zinc-500 dark:text-zinc-400">
               {dict.phonetic && <span>{dict.phonetic}</span>}
-              <SpeakerButton text={dict.word} lang="en" size="sm" title="朗读单词" />
+              <SpeakerButton text={dict.word} lang={lang} size="sm" title={lang === 'zh' ? '朗读词语' : '朗读单词'} />
             </span>
           )}
         </div>
@@ -50,8 +51,20 @@ function DictSection({ dict }: { dict: DictEntry }) {
         )}
       </div>
 
-      {/* 释义：词性单独一列，释义左缘对齐 */}
-      {dict.parts && dict.parts.length > 0 ? (
+      {/* 释义：中文词列英文对应词（可点读），英文词按词性列；左缘对齐 */}
+      {dict.equivalents && dict.equivalents.length > 0 ? (
+        <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-3 gap-y-1.5">
+          {dict.equivalents.map((e, i) => (
+            <div key={i} className="contents">
+              <dt className="inline-flex items-center gap-0.5">
+                <span className={`font-medium ${link}`}>{e.word}</span>
+                <SpeakerButton text={e.word} lang="en" size="sm" title={`朗读 ${e.word}`} />
+              </dt>
+              <dd className="min-w-0">{e.means}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : dict.parts && dict.parts.length > 0 ? (
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
           {dict.parts.map((p, i) => (
             <div key={i} className="contents">

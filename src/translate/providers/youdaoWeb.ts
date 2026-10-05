@@ -141,6 +141,13 @@ async function translateText(text: string, from: string, to: string, signal?: Ab
 }
 
 interface DictResponse {
+  /** 汉英：trs 每项是一个英文对应词 + 中文说明 */
+  ce?: {
+    word?: {
+      phone?: string;
+      trs?: { '#text'?: string; '#tran'?: string }[];
+    };
+  };
   ec?: {
     exam_type?: string[];
     word?: {
@@ -165,6 +172,24 @@ async function lookupWord(word: string): Promise<DictEntry | null> {
   });
   if (!res.ok) throw new ProviderError('NETWORK', `有道词典请求失败: HTTP ${res.status}`);
   const data = (await res.json()) as DictResponse;
+
+  const cw = data.ce?.word;
+  if (cw?.trs?.length) {
+    const equivalents = cw.trs
+      .filter((tr) => tr['#text'])
+      .slice(0, 8)
+      // 说明可能列十几个义项（如 finish），只留前三个
+      .map((tr) => ({ word: tr['#text']!, means: (tr['#tran'] ?? '').split('；').filter(Boolean).slice(0, 3).join('；') }));
+    if (!equivalents.length) return null;
+    return {
+      word,
+      lang: 'zh',
+      phonetic: cw.phone || undefined,
+      explanations: equivalents.map((e) => e.word),
+      equivalents,
+    };
+  }
+
   const w = data.ec?.word;
   if (!w?.trs?.length) return null;
 

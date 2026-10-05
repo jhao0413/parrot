@@ -3,6 +3,8 @@ import { z } from 'zod';
 /** 词典查询结果（有道等 provider 可选返回） */
 export interface DictEntry {
   word: string;
+  /** 词头语言（决定发音）；不填为英文。中文词的 phonetic 是拼音 */
+  lang?: 'en' | 'zh';
   phonetic?: string;
   explanations: string[];
   /** 以下为富词典字段（有道词典提供），其他 provider 可不填 */
@@ -17,6 +19,8 @@ export interface DictEntry {
   phrases?: { text: string; means: string[] }[];
   /** 英文释义（Google 提供），按词性分组，可带例句 */
   definitions?: { pos: string; items: { text: string; example?: string }[] }[];
+  /** 中文词的英文对应词（有道汉英词典），如 { word: 'accomplish', means: '完成，实现' } */
+  equivalents?: { word: string; means: string }[];
 }
 
 export interface TranslateItemResult {
